@@ -288,7 +288,7 @@ def search_matches(normalized_query: str) -> list[dict]:
                 "minimum_should_match": 1,
             }
         },
-        "collapse": {"field": "security_name.keyword"},
+        "collapse": {"field": "family_name.keyword"},
     }
 
     response = es.search(index=index_name, body=body)

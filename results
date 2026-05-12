@@ -1,0 +1,1291 @@
+/*only ES score*/
+{
+  "input": "DRS Holdings III Amendment No. 4 Incremental T/L",
+  "normalized": "drs holdings iii amendment no four incremental term loan",
+  "matched": true,
+  "best_match": {
+    "security_name": "Dr. Scholl's (Term Loan)",
+    "score": 79.624115,
+    "soi_name": "DRS Holdings III",
+    "family_name": "Dr. Scholl's",
+    "security_type": "First Lien",
+    "normalized_name": "dr scholl s term loan"
+  },
+  "matches": [
+    {
+      "security_name": "Dr. Scholl's (Term Loan)",
+      "score": 79.624115,
+      "soi_name": "DRS Holdings III",
+      "family_name": "Dr. Scholl's",
+      "security_type": "First Lien",
+      "normalized_name": "dr scholl s term loan"
+    },
+    {
+      "security_name": "Dr. Scholl's (Revolver)",
+      "score": 60.741726,
+      "soi_name": "DRS Holdings III, Inc. - Funded Revolver",
+      "family_name": "Dr. Scholl's",
+      "security_type": "First Lien",
+      "normalized_name": "dr scholl s revolver"
+    },
+    {
+      "security_name": "Prelude (Incremental Term Loan)",
+      "score": 27.338211,
+      "soi_name": "Inception Fertility Ventures, LLC - Incremental Term Loan)",
+      "family_name": "Prelude",
+      "security_type": "First Lien",
+      "normalized_name": "prelude incremental term loan"
+    },
+    {
+      "security_name": "Sigma Defense (Incremental TL)",
+      "score": 27.338211,
+      "soi_name": "Sigma Defense Systems, Inc. - Incremental Term Loan",
+      "family_name": "Sigma Defense",
+      "security_type": "First Lien",
+      "normalized_name": "sigma defense incremental term loan"
+    },
+    {
+      "security_name": "Wheel Pros (1L)",
+      "score": 24.48051,
+      "soi_name": "Icon Partners III, LP - Term Loan",
+      "family_name": "Wheel Pros",
+      "security_type": "First Lien",
+      "normalized_name": "wheel pros first lien"
+    }
+  ]
+}
+
+/*-----------------------------------*/
+
+{
+  "input": "Arcline FM Holdings T/L (7/24) (Fairbanks Morse) - Target",
+  "normalized": "arcline fm holdings term loan seven twentyfour fairbanks morse target",
+  "matched": true,
+  "best_match": {
+    "security_name": "Fairbanks Morse Defense (Incremental Term Loan)",
+    "score": 106.835556,
+    "soi_name": "Arcline FM Holdings, LLC",
+    "family_name": "Fairbanks Morse Defense",
+    "security_type": "First Lien",
+    "normalized_name": "fairbanks morse defense incremental term loan"
+  },
+  "matches": [
+    {
+      "security_name": "Fairbanks Morse Defense (Incremental Term Loan)",
+      "score": 106.835556,
+      "soi_name": "Arcline FM Holdings, LLC",
+      "family_name": "Fairbanks Morse Defense",
+      "security_type": "First Lien",
+      "normalized_name": "fairbanks morse defense incremental term loan"
+    },
+    {
+      "security_name": "Fairbanks Morse Defense (Term Loan)",
+      "score": 46.09213,
+      "soi_name": "Fairbanks Morse Defense",
+      "family_name": "Fairbanks Morse Defense",
+      "security_type": "First Lien",
+      "normalized_name": "fairbanks morse defense term loan"
+    },
+    {
+      "security_name": "IMIA (Term Loan)",
+      "score": 18.596527,
+      "soi_name": "IMIA Holdings, Inc. - Term Loan",
+      "family_name": "",
+      "security_type": "First Lien",
+      "normalized_name": "imia term loan"
+    },
+    {
+      "security_name": "CHA Consulting (DDTL)",
+      "score": 17.126509,
+      "soi_name": "CHA Holdings, Inc. - Unfunded Term Loan",
+      "family_name": "CHA Consulting",
+      "security_type": "First Lien",
+      "normalized_name": "cha consulting delayed draw term loan"
+    },
+    {
+      "security_name": "SpendMend (DDTL)",
+      "score": 17.126509,
+      "soi_name": "SPENDMEND HOLDINGS LLC - Unfunded Term Loan",
+      "family_name": "SpendMend",
+      "security_type": "First Lien",
+      "normalized_name": "spendmend delayed draw term loan"
+    }
+  ]
+}
+
+/*------------------------------*/
+{
+  "input": "PlayPower T/L (08/24)",
+  "normalized": "playpower term loan eight twentyfour",
+  "matched": true,
+  "best_match": {
+    "security_name": "PlayPower (Term Loan)",
+    "score": 284.8532,
+    "soi_name": "PlayPower, Inc.",
+    "family_name": "PlayPower",
+    "security_type": "First Lien",
+    "normalized_name": "playpower term loan"
+  },
+  "matches": [
+    {
+      "security_name": "PlayPower (Term Loan)",
+      "score": 284.8532,
+      "soi_name": "PlayPower, Inc.",
+      "family_name": "PlayPower",
+      "security_type": "First Lien",
+      "normalized_name": "playpower term loan"
+    },
+    {
+      "security_name": "Recteq (TL)",
+      "score": 34.356525,
+      "soi_name": "Recteq, LLC - Term Loan",
+      "family_name": "Recteq",
+      "security_type": "First Lien",
+      "normalized_name": "recteq term loan"
+    },
+    {
+      "security_name": "Vertex (DDTL)",
+      "score": 32.305298,
+      "soi_name": "Vertex - Unfunded Term Loan",
+      "family_name": "Vertex",
+      "security_type": "First Lien",
+      "normalized_name": "vertex delayed draw term loan"
+    },
+    {
+      "security_name": "Zips (DDTL)",
+      "score": 32.305298,
+      "soi_name": "Zips - Unfunded Term Loan",
+      "family_name": "Zips",
+      "security_type": "First Lien",
+      "normalized_name": "zips delayed draw term loan"
+    },
+    {
+      "security_name": "Gen3 Marketing (DDTL)",
+      "score": 31.018705,
+      "soi_name": "CF512, Inc. - Unfunded Term Loan",
+      "family_name": "Gen3 Marketing",
+      "security_type": "First Lien",
+      "normalized_name": "gen3 marketing delayed draw term loan"
+    }
+  ]
+}
+/*------------------------------*/
+
+{
+  "input": "PlayPower T/L (5/19)",
+  "normalized": "playpower term loan five nineteen",
+  "matched": true,
+  "best_match": {
+    "security_name": "PlayPower (Term Loan)",
+    "score": 284.8532,
+    "soi_name": "PlayPower, Inc.",
+    "family_name": "PlayPower",
+    "security_type": "First Lien",
+    "normalized_name": "playpower term loan"
+  },
+  "matches": [
+    {
+      "security_name": "PlayPower (Term Loan)",
+      "score": 284.8532,
+      "soi_name": "PlayPower, Inc.",
+      "family_name": "PlayPower",
+      "security_type": "First Lien",
+      "normalized_name": "playpower term loan"
+    },
+    {
+      "security_name": "Five Star (DDTLB)",
+      "score": 57.148415,
+      "soi_name": "Five Star Buyer, Inc. - Unfunded Term Loan",
+      "family_name": "Five Star",
+      "security_type": "First Lien",
+      "normalized_name": "five star delayed draw term loan b"
+    },
+    {
+      "security_name": "Recteq (TL)",
+      "score": 34.356525,
+      "soi_name": "Recteq, LLC - Term Loan",
+      "family_name": "Recteq",
+      "security_type": "First Lien",
+      "normalized_name": "recteq term loan"
+    },
+    {
+      "security_name": "Vertex (DDTL)",
+      "score": 32.305298,
+      "soi_name": "Vertex - Unfunded Term Loan",
+      "family_name": "Vertex",
+      "security_type": "First Lien",
+      "normalized_name": "vertex delayed draw term loan"
+    },
+    {
+      "security_name": "Zips (DDTL)",
+      "score": 32.305298,
+      "soi_name": "Zips - Unfunded Term Loan",
+      "family_name": "Zips",
+      "security_type": "First Lien",
+      "normalized_name": "zips delayed draw term loan"
+    }
+  ]
+}
+/*-----------bluehalo-------------------*/
+{
+  "input": "BlueHalo Global Holdings LLC",
+  "normalized": "bluehalo global holdings",
+  "matched": true,
+  "best_match": {
+    "security_name": "BlueHalo (Term Loan)",
+    "score": 212.10762,
+    "soi_name": "The Aegis Technologies Group, LLC",
+    "family_name": "BlueHalo",
+    "security_type": "First Lien",
+    "normalized_name": "bluehalo term loan"
+  },
+  "matches": [
+    {
+      "security_name": "BlueHalo (Term Loan)",
+      "score": 212.10762,
+      "soi_name": "The Aegis Technologies Group, LLC",
+      "family_name": "BlueHalo",
+      "security_type": "First Lien",
+      "normalized_name": "bluehalo term loan"
+    },
+    {
+      "security_name": "Global (Term Loan)",
+      "score": 53.735054,
+      "soi_name": "Global Holdings InterCo LLC",
+      "family_name": "Global",
+      "security_type": "First Lien",
+      "normalized_name": "global term loan"
+    },
+    {
+      "security_name": "Schlesinger (Term Loan)",
+      "score": 39.084892,
+      "soi_name": "Schlesinger Global, Inc.",
+      "family_name": "Schlesinger",
+      "security_type": "First Lien",
+      "normalized_name": "schlesinger term loan"
+    },
+    {
+      "security_name": "Schlesinger (Revolver)",
+      "score": 31.455692,
+      "soi_name": "Schlesinger Global, Inc. - Funded Revolver",
+      "family_name": "Schlesinger",
+      "security_type": "First Lien",
+      "normalized_name": "schlesinger revolver"
+    },
+    {
+      "security_name": "UniTek (Common Eq)",
+      "score": 31.455692,
+      "soi_name": "UniTek Global Services, Inc.(C)",
+      "family_name": "UniTek",
+      "security_type": "Common Equity",
+      "normalized_name": "unitek common equity"
+    }
+  ]
+}
+
+/*score below 50 INCORRECT MATCH*
+correct match for A1 Garage (DDTL)
+A1 Garage (Term Loan)*/
+{
+  "input": "TMII Enterprises LLC",
+  "normalized": "tmii enterprises",
+  "matched": true,
+  "best_match": {
+    "security_name": "TVC (TL)",
+    "score": 42.307907,
+    "soi_name": "TVC Enterprises, LLC",
+    "family_name": "TVC",
+    "security_type": "First Lien",
+    "normalized_name": "tvc term loan"
+  },
+  "matches": [
+    {
+      "security_name": "TVC (TL)",
+      "score": 42.307907,
+      "soi_name": "TVC Enterprises, LLC",
+      "family_name": "TVC",
+      "security_type": "First Lien",
+      "normalized_name": "tvc term loan"
+    },
+    {
+      "security_name": "US Fertility (Term Loan)",
+      "score": 37.726555,
+      "soi_name": "US Fertility Enterprises, LLC",
+      "family_name": "US Fertility",
+      "security_type": "First Lien",
+      "normalized_name": "us fertility term loan"
+    },
+    {
+      "security_name": "US Fertility (DDTL)",
+      "score": 37.726555,
+      "soi_name": "US Fertility Enterprises, LLC",
+      "family_name": "US Fertility",
+      "security_type": "First Lien",
+      "normalized_name": "us fertility delayed draw term loan"
+    },
+    {
+      "security_name": "TVC (Revolver)",
+      "score": 34.04959,
+      "soi_name": "TVC Enterprises, LLC - Funded Revolver",
+      "family_name": "TVC",
+      "security_type": "First Lien",
+      "normalized_name": "tvc revolver"
+    },
+    {
+      "security_name": "TVC (DDTL)",
+      "score": 31.031342,
+      "soi_name": "TVC Enterprises, LLC - Unfunded Term Loan",
+      "family_name": "TVC",
+      "security_type": "First Lien",
+      "normalized_name": "tvc delayed draw term loan"
+    }
+  ]
+}
+
+/*sv-aeronix --aeronix(TL) mastercomp SN*/
+/*fixed it was a normalization glitch as we used to remove - earlier */
+{
+  "input": "SV-Aero Holdings LLC",
+  "normalized": "svaero holdings",
+  "matched": true,
+  "best_match": {
+    "security_name": "Watchtower Holding (Common Equity)",
+    "score": 20.781868,
+    "soi_name": "Watchtower Holdings",
+    "family_name": "Watchtower Holdings",
+    "security_type": "Common Equity",
+    "normalized_name": "watchtower holding common equity"
+  },
+  "matches": [
+    {
+      "security_name": "Watchtower Holding (Common Equity)",
+      "score": 20.781868,
+      "soi_name": "Watchtower Holdings",
+      "family_name": "Watchtower Holdings",
+      "security_type": "Common Equity",
+      "normalized_name": "watchtower holding common equity"
+    },
+    {
+      "security_name": "AKW Holdings (Term Loan)",
+      "score": 20.09893,
+      "soi_name": "AKW Holdings Limited",
+      "family_name": "AKW Holdings",
+      "security_type": "First Lien",
+      "normalized_name": "akw holdings term loan"
+    },
+    {
+      "security_name": "AKW Holdings (Common)",
+      "score": 18.55411,
+      "soi_name": "AKW Holdings Limited (Equity)",
+      "family_name": "AKW Holdings",
+      "security_type": "Common Equity",
+      "normalized_name": "akw holdings common"
+    },
+    {
+      "security_name": "American Surgical (Preferred Equity)",
+      "score": 14.266119,
+      "soi_name": "AH Holdings, Inc.",
+      "family_name": "American Surgical",
+      "security_type": "Preferred Equity",
+      "normalized_name": "american surgical preferred equity"
+    },
+    {
+      "security_name": "Ascensus (Term Loan)",
+      "score": 14.266119,
+      "soi_name": "Ascensus Holdings, Inc.",
+      "family_name": "Ascensus",
+      "security_type": "First Lien",
+      "normalized_name": "ascensus term loan"
+    }
+  ]
+}
+
+#after fix 
+{
+  "input": "Sv Aero Holdings LLC",
+  "normalized": "sv aero holdings",
+  "matched": true,
+  "best_match": {
+    "security_name": "Aeronix (Common Equity)",
+    "score": 344.8012,
+    "soi_name": "SV-Aero Holdings, LLC",
+    "family_name": "Aeronix",
+    "security_type": "Common Equity",
+    "normalized_name": "aeronix common equity"
+  },
+  "matches": [
+    {
+      "security_name": "Aeronix (Common Equity)",
+      "score": 344.8012,
+      "soi_name": "SV-Aero Holdings, LLC",
+      "family_name": "Aeronix",
+      "security_type": "Common Equity",
+      "normalized_name": "aeronix common equity"
+    },
+    {
+      "security_name": "Watchtower Holding (Common Equity)",
+      "score": 20.781868,
+      "soi_name": "Watchtower Holdings",
+      "family_name": "Watchtower Holdings",
+      "security_type": "Common Equity",
+      "normalized_name": "watchtower holding common equity"
+    },
+    {
+      "security_name": "AKW Holdings (Term Loan)",
+      "score": 20.09893,
+      "soi_name": "AKW Holdings Limited",
+      "family_name": "AKW Holdings",
+      "security_type": "First Lien",
+      "normalized_name": "akw holdings term loan"
+    },
+    {
+      "security_name": "AKW Holdings (Common)",
+      "score": 18.55411,
+      "soi_name": "AKW Holdings Limited (Equity)",
+      "family_name": "AKW Holdings",
+      "security_type": "Common Equity",
+      "normalized_name": "akw holdings common"
+    },
+    {
+      "security_name": "American Surgical (Preferred Equity)",
+      "score": 14.266119,
+      "soi_name": "AH Holdings, Inc.",
+      "family_name": "American Surgical",
+      "security_type": "Preferred Equity",
+      "normalized_name": "american surgical preferred equity"
+    }
+  ]
+}
+
+
+/*maximum match sample record*/
+{
+  "input": "Archer Lewis, LLC",
+  "normalized": "archer lewis",
+  "matched": true,
+  "best_match": {
+    "security_name": "Archer Lewis (Revolver)",
+    "score": 792.64624,
+    "soi_name": "Archer Lewis LLC",
+    "family_name": "Archer Lewis",
+    "security_type": "First Lien",
+    "normalized_name": "archer lewis revolver"
+  },
+  "matches": [
+    {
+      "security_name": "Archer Lewis (Revolver)",
+      "score": 792.64624,
+      "soi_name": "Archer Lewis LLC",
+      "family_name": "Archer Lewis",
+      "security_type": "First Lien",
+      "normalized_name": "archer lewis revolver"
+    },
+    {
+      "security_name": "Archer Lewis (Term Loan)",
+      "score": 739.1886,
+      "soi_name": "Archer Lewis LLC",
+      "family_name": "Archer Lewis",
+      "security_type": "First Lien",
+      "normalized_name": "archer lewis term loan"
+    },
+    {
+      "security_name": "Archer Lewis (Unfunded DDTL A)",
+      "score": 649.70325,
+      "soi_name": "Archer Lewis LLC",
+      "family_name": "Archer Lewis",
+      "security_type": "First Lien",
+      "normalized_name": "archer lewis unfunded delayed draw term loan a"
+    },
+    {
+      "security_name": "Archer Lewis (Unfunded DDTL B)",
+      "score": 649.70325,
+      "soi_name": "Archer Lewis LLC",
+      "family_name": "Archer Lewis",
+      "security_type": "First Lien",
+      "normalized_name": "archer lewis unfunded delayed draw term loan b"
+    },
+    {
+      "security_name": "Archer Lewis (Common Equity)",
+      "score": 455.2909,
+      "soi_name": "StoicLane, Inc.",
+      "family_name": "Archer Lewis",
+      "security_type": "Common Equity",
+      "normalized_name": "archer lewis common equity"
+    }
+  ]
+}
+/*C5MI*/
+{
+  "input": "Knexus Holdco, LLC - Preferred Equity",
+  "normalized": "knexus holdco preferred equity",
+  "matched": true,
+  "best_match": {
+    "security_name": "OpenRoad Lending (Preferred Equity)",
+    "score": 72.43904,
+    "soi_name": "ORL Holdco, Inc - Preferred Equity",
+    "family_name": "OpenRoad Lending",
+    "security_type": "Preferred Equity",
+    "normalized_name": "openroad lending preferred equity"
+  },
+  "matches": [
+    {
+      "security_name": "OpenRoad Lending (Preferred Equity)",
+      "score": 72.43904,
+      "soi_name": "ORL Holdco, Inc - Preferred Equity",
+      "family_name": "OpenRoad Lending",
+      "security_type": "Preferred Equity",
+      "normalized_name": "openroad lending preferred equity"
+    },
+    {
+      "security_name": "OpenRoad Lending (Common Equity)",
+      "score": 47.18869,
+      "soi_name": "ORL Holdco, Inc - Common Equity",
+      "family_name": "OpenRoad Lending",
+      "security_type": "Common Equity",
+      "normalized_name": "openroad lending common equity"
+    },
+    {
+      "security_name": "Integrity Marketing (Preferred Equity)",
+      "score": 44.669918,
+      "soi_name": "Integrity Marketing Acquisition, LLC  - Preferred Equity",
+      "family_name": "Integrity Marketing",
+      "security_type": "Preferred Equity",
+      "normalized_name": "integrity marketing preferred equity"
+    },
+    {
+      "security_name": "Vertex (Preferred Equity)",
+      "score": 44.669918,
+      "soi_name": "TWD Parent Holdings, LLC - Preferred Equity",
+      "family_name": "Vertex",
+      "security_type": "Preferred Equity",
+      "normalized_name": "vertex preferred equity"
+    },
+    {
+      "security_name": "Signature Systems Group (Preferred Equity)",
+      "score": 44.360016,
+      "soi_name": "Signature CR Intermediate Holdco, Inc. (Preferred)",
+      "family_name": "Signature Systems Group",
+      "security_type": "Preferred Equity",
+      "normalized_name": "signature systems group preferred equity"
+    }
+  ]
+}
+
+/*pacific -peninsula ....correct match prosearch*/
+{
+  "input": "Pacific Purchaser, LLC - Unfunded Revolver",
+  "normalized": "pacific purchaser unfunded revolver",
+  "matched": true,
+  "best_match": {
+    "security_name": "Peninsula Pacific Entertainment (Term Loan B)",
+    "score": 243.42706,
+    "soi_name": "Peninsula Pacific Entertainment Development, LLC",
+    "family_name": "Peninsula Pacific Entertainment",
+    "security_type": "First Lien",
+    "normalized_name": "peninsula pacific entertainment term loan b"
+  },
+  "matches": [
+    {
+      "security_name": "Peninsula Pacific Entertainment (Term Loan B)",
+      "score": 243.42706,
+      "soi_name": "Peninsula Pacific Entertainment Development, LLC",
+      "family_name": "Peninsula Pacific Entertainment",
+      "security_type": "First Lien",
+      "normalized_name": "peninsula pacific entertainment term loan b"
+    },
+    {
+      "security_name": "Peninsula Pacific Entertainment (DDTL B)",
+      "score": 242.05444,
+      "soi_name": "Peninsula Pacific Entertainment Development, LLC",
+      "family_name": "Peninsula Pacific Entertainment",
+      "security_type": "First Lien",
+      "normalized_name": "peninsula pacific entertainment delayed draw term loan b"
+    },
+    {
+      "security_name": "ProSearch (TL)",
+      "score": 111.82514,
+      "soi_name": "Pacific Purchaser, LLC",
+      "family_name": "ProSearch",
+      "security_type": "First Lien",
+      "normalized_name": "prosearch term loan"
+    },
+    {
+      "security_name": "ProSearch (Revolver)",
+      "score": 111.82514,
+      "soi_name": "Pacific Purchaser, LLC",
+      "family_name": "ProSearch",
+      "security_type": "First Lien",
+      "normalized_name": "prosearch revolver"
+    },
+    {
+      "security_name": "ProSearch (DDTL)",
+      "score": 111.82514,
+      "soi_name": "Pacific Purchaser, LLC",
+      "family_name": "ProSearch",
+      "security_type": "First Lien",
+      "normalized_name": "prosearch delayed draw term loan"
+    }
+  ]
+}
+
+/*score below 50 INCORRECT MATCH**/
+{
+  "input": "Rural Sourcing Holdings, Inc. - Unfunded Revolver",
+  "normalized": "rural sourcing holdings unfunded revolver",
+  "matched": true,
+  "best_match": {
+    "security_name": "IMIA (Revolver)",
+    "score": 33.681442,
+    "soi_name": "IMIA Holdings, Inc. - Unfunded Revolver",
+    "family_name": "",
+    "security_type": "First Lien",
+    "normalized_name": "imia revolver"
+  },
+  "matches": [
+    {
+      "security_name": "IMIA (Revolver)",
+      "score": 33.681442,
+      "soi_name": "IMIA Holdings, Inc. - Unfunded Revolver",
+      "family_name": "",
+      "security_type": "First Lien",
+      "normalized_name": "imia revolver"
+    },
+    {
+      "security_name": "Intellectual Technology, Inc. (Rev)",
+      "score": 33.681442,
+      "soi_name": "ITI Holdings, Inc. - Unfunded Revolver",
+      "family_name": "Intellectual Technology",
+      "security_type": "First Lien",
+      "normalized_name": "intellectual technology revolver"
+    },
+    {
+      "security_name": "Kele (Revolver)",
+      "score": 33.681442,
+      "soi_name": "KHC Holdings, Inc. - Unfunded Revolver",
+      "family_name": "",
+      "security_type": "First Lien",
+      "normalized_name": "kele revolver"
+    },
+    {
+      "security_name": "Momentum (Revolver)",
+      "score": 33.681442,
+      "soi_name": "MBS Holdings, Inc. - Unfunded Revolver",
+      "family_name": "Momentum",
+      "security_type": "First Lien",
+      "normalized_name": "momentum revolver"
+    },
+    {
+      "security_name": "SpendMend (Revolver)",
+      "score": 33.681442,
+      "soi_name": "SPENDMEND HOLDINGS LLC - Unfunded Revolver",
+      "family_name": "SpendMend",
+      "security_type": "First Lien",
+      "normalized_name": "spendmend revolver"
+    }
+  ]
+}
+{
+  "input": "Rural Sourcing Holdings, Inc.",
+  "normalized": "rural sourcing holdings",
+  "matched": true,
+  "best_match": {
+    "security_name": "Watchtower Holding (Common Equity)",
+    "score": 20.781868,
+    "soi_name": "Watchtower Holdings",
+    "family_name": "Watchtower Holdings",
+    "security_type": "Common Equity",
+    "normalized_name": "watchtower holding common equity"
+  },
+  "matches": [
+    {
+      "security_name": "Watchtower Holding (Common Equity)",
+      "score": 20.781868,
+      "soi_name": "Watchtower Holdings",
+      "family_name": "Watchtower Holdings",
+      "security_type": "Common Equity",
+      "normalized_name": "watchtower holding common equity"
+    },
+    {
+      "security_name": "AKW Holdings (Term Loan)",
+      "score": 20.09893,
+      "soi_name": "AKW Holdings Limited",
+      "family_name": "AKW Holdings",
+      "security_type": "First Lien",
+      "normalized_name": "akw holdings term loan"
+    },
+    {
+      "security_name": "AKW Holdings (Common)",
+      "score": 18.55411,
+      "soi_name": "AKW Holdings Limited (Equity)",
+      "family_name": "AKW Holdings",
+      "security_type": "Common Equity",
+      "normalized_name": "akw holdings common"
+    },
+    {
+      "security_name": "American Surgical (Preferred Equity)",
+      "score": 14.266119,
+      "soi_name": "AH Holdings, Inc.",
+      "family_name": "American Surgical",
+      "security_type": "Preferred Equity",
+      "normalized_name": "american surgical preferred equity"
+    },
+    {
+      "security_name": "Ascensus (Term Loan)",
+      "score": 14.266119,
+      "soi_name": "Ascensus Holdings, Inc.",
+      "family_name": "Ascensus",
+      "security_type": "First Lien",
+      "normalized_name": "ascensus term loan"
+    }
+  ]
+}
+/*------------------------------------------------------------------*/
+/*results after score normalization (ES score + similarity score)*/
+{
+  "input": "TMII Enterprises LLC",
+  "normalized": "tmii enterprises",
+  "matched": true,
+  "best_match": {
+    "security_name": "TVC (TL)",
+    "score": 76.5517,
+    "raw_es_score": 42.3079,
+    "es_norm_score": 100.0,
+    "similarity_score": 41.3793,
+    "soi_name": "TVC Enterprises, LLC",
+    "family_name": "TVC",
+    "security_type": "First Lien",
+    "normalized_name": "tvc term loan"
+  },
+  "matches": [
+    {
+      "security_name": "TVC (TL)",
+      "score": 76.5517,
+      "raw_es_score": 42.3079,
+      "es_norm_score": 100.0,
+      "similarity_score": 41.3793,
+      "soi_name": "TVC Enterprises, LLC",
+      "family_name": "TVC",
+      "security_type": "First Lien",
+      "normalized_name": "tvc term loan"
+    },
+    {
+      "security_name": "US Fertility (Term Loan)",
+      "score": 66.1344,
+      "raw_es_score": 37.7266,
+      "es_norm_score": 89.1714,
+      "similarity_score": 31.5789,
+      "soi_name": "US Fertility Enterprises, LLC",
+      "family_name": "US Fertility",
+      "security_type": "First Lien",
+      "normalized_name": "us fertility term loan"
+    },
+    {
+      "security_name": "US Fertility (DDTL)",
+      "score": 66.0519,
+      "raw_es_score": 37.7266,
+      "es_norm_score": 89.1714,
+      "similarity_score": 31.3725,
+      "soi_name": "US Fertility Enterprises, LLC",
+      "family_name": "US Fertility",
+      "security_type": "First Lien",
+      "normalized_name": "us fertility delayed draw term loan"
+    },
+    {
+      "security_name": "TVC (Revolver)",
+      "score": 62.574,
+      "raw_es_score": 34.0496,
+      "es_norm_score": 80.4804,
+      "similarity_score": 35.7143,
+      "soi_name": "TVC Enterprises, LLC - Funded Revolver",
+      "family_name": "TVC",
+      "security_type": "First Lien",
+      "normalized_name": "tvc revolver"
+    },
+    {
+      "security_name": "TVC (DDTL)",
+      "score": 57.3412,
+      "raw_es_score": 31.0313,
+      "es_norm_score": 73.3464,
+      "similarity_score": 33.3333,
+      "soi_name": "TVC Enterprises, LLC - Unfunded Term Loan",
+      "family_name": "TVC",
+      "security_type": "First Lien",
+      "normalized_name": "tvc delayed draw term loan"
+    }
+  ]
+}
+
+{
+  "input": "BlueHalo Global Holdings LLC",
+  "normalized": "bluehalo global holdings",
+  "matched": true,
+  "best_match": {
+    "security_name": "BlueHalo (Term Loan)",
+    "score": 84.7619,
+    "raw_es_score": 212.1076,
+    "es_norm_score": 100.0,
+    "similarity_score": 61.9048,
+    "soi_name": "The Aegis Technologies Group, LLC",
+    "family_name": "BlueHalo",
+    "security_type": "First Lien",
+    "normalized_name": "bluehalo term loan"
+  },
+  "matches": [
+    {
+      "security_name": "BlueHalo (Term Loan)",
+      "score": 84.7619,
+      "raw_es_score": 212.1076,
+      "es_norm_score": 100.0,
+      "similarity_score": 61.9048,
+      "soi_name": "The Aegis Technologies Group, LLC",
+      "family_name": "BlueHalo",
+      "security_type": "First Lien",
+      "normalized_name": "bluehalo term loan"
+    },
+    {
+      "security_name": "Global (Term Loan)",
+      "score": 33.2003,
+      "raw_es_score": 53.7351,
+      "es_norm_score": 25.3339,
+      "similarity_score": 45.0,
+      "soi_name": "Global Holdings InterCo LLC",
+      "family_name": "Global",
+      "security_type": "First Lien",
+      "normalized_name": "global term loan"
+    },
+    {
+      "security_name": "Schlesinger (Term Loan)",
+      "score": 27.0561,
+      "raw_es_score": 39.0849,
+      "es_norm_score": 18.4269,
+      "similarity_score": 40.0,
+      "soi_name": "Schlesinger Global, Inc.",
+      "family_name": "Schlesinger",
+      "security_type": "First Lien",
+      "normalized_name": "schlesinger term loan"
+    },
+    {
+      "security_name": "Schlesinger (Revolver)",
+      "score": 25.2617,
+      "raw_es_score": 31.4557,
+      "es_norm_score": 14.8301,
+      "similarity_score": 40.9091,
+      "soi_name": "Schlesinger Global, Inc. - Funded Revolver",
+      "family_name": "Schlesinger",
+      "security_type": "First Lien",
+      "normalized_name": "schlesinger revolver"
+    },
+    {
+      "security_name": "UniTek (Common Eq)",
+      "score": 17.9889,
+      "raw_es_score": 31.4557,
+      "es_norm_score": 14.8301,
+      "similarity_score": 22.7273,
+      "soi_name": "UniTek Global Services, Inc.(C)",
+      "family_name": "UniTek",
+      "security_type": "Common Equity",
+      "normalized_name": "unitek common equity"
+    }
+  ]
+} 
+
+/*---------4wall Ent ----------------*/
+{
+  "input": "4Wall Entertainment",
+  "normalized": "4wall entertainment",
+  "matched": true,
+  "best_match": {
+    "security_name": "4Wall Entertainment (Revolver)",
+    "score": 1.0,
+    "raw_es_score": 505.7617,
+    "es_scaled": 1.0,
+    "similarity_score": 1.0,
+    "low_es_confidence": false,
+    "candidate_matched": true,
+    "soi_name": "LAV Gear Holdings, Inc. - Funded Revolver",
+    "family_name": "4Wall Entertainment",
+    "security_type": "First Lien",
+    "normalized_name": "4wall entertainment revolver"
+  },
+  "matches": [
+    {
+      "security_name": "4Wall Entertainment (Revolver)",
+      "score": 1.0,
+      "raw_es_score": 505.7617,
+      "es_scaled": 1.0,
+      "similarity_score": 1.0,
+      "candidate_matched": true,
+      "soi_name": "LAV Gear Holdings, Inc. - Funded Revolver",
+      "family_name": "4Wall Entertainment",
+      "security_type": "First Lien",
+      "normalized_name": "4wall entertainment revolver"
+    },
+    {
+      "security_name": "4Wall Entertainment (Term Loan)",
+      "score": 1.0,
+      "raw_es_score": 452.4912,
+      "es_scaled": 1.0,
+      "similarity_score": 1.0,
+      "low_es_confidence": false,
+      "candidate_matched": true,
+      "soi_name": "LAV Gear Holdings, Inc.",
+      "family_name": "4Wall Entertainment",
+      "security_type": "First Lien",
+      "normalized_name": "4wall entertainment term loan"
+    },
+    {
+      "security_name": "4Wall Entertainment (NM Revolver)",
+      "score": 1.0,
+      "raw_es_score": 452.4912,
+      "es_scaled": 1.0,
+      "similarity_score": 1.0,
+      "low_es_confidence": false,
+      "candidate_matched": true,
+      "soi_name": "LAV Gear Holdings, Inc.",
+      "family_name": "4Wall Entertainment",
+      "security_type": "First Lien",
+      "normalized_name": "4wall entertainment nm revolver"
+    },
+    {
+      "security_name": "4Wall Entertainment (DDTL)",
+      "score": 1.0,
+      "raw_es_score": 437.9033,
+      "es_scaled": 1.0,
+      "similarity_score": 1.0,
+      "low_es_confidence": false,
+      "candidate_matched": true,
+      "soi_name": "LAV Gear Holdings, Inc. - Unfunded Term Loan",
+      "family_name": "4Wall Entertainment",
+      "security_type": "First Lien",
+      "normalized_name": "4wall entertainment delayed draw term loan"
+    },
+    {
+      "security_name": "4Wall Entertainment (NM TL)",
+      "score": 1.0,
+      "raw_es_score": 430.3401,
+      "es_scaled": 1.0,
+      "similarity_score": 1.0,
+      "low_es_confidence": false,
+      "candidate_matched": true,
+      "soi_name": "LAV Gear Holdings, Inc.",
+      "family_name": "4Wall Entertainment",
+      "security_type": "First Lien",
+      "normalized_name": "4wall entertainment nm term loan"
+    }
+  ]
+}
+
+/*-----------LAV gear---------------------*/
+{
+  "input": "LAV Gear Holdings",
+  "normalized": "lav gear holdings",
+  "matched": false,
+  "best_match": null,
+  "matches": [
+    {
+      "security_name": "4Wall Entertainment (Term Loan)",
+      "score": 0.0,
+      "raw_es_score": 282.125,
+      "es_scaled": 1.0,
+      "similarity_score": 0.2222,
+      "low_es_confidence": false,
+      "candidate_matched": false,
+      "soi_name": "LAV Gear Holdings, Inc.",
+      "family_name": "4Wall Entertainment",
+      "security_type": "First Lien",
+      "normalized_name": "4wall entertainment term loan"
+    },
+    {
+      "security_name": "4Wall Entertainment (NM Revolver)",
+      "score": 0.0,
+      "raw_es_score": 282.125,
+      "es_scaled": 1.0,
+      "similarity_score": 0.2564,
+      "low_es_confidence": false,
+      "candidate_matched": false,
+      "soi_name": "LAV Gear Holdings, Inc.",
+      "family_name": "4Wall Entertainment",
+      "security_type": "First Lien",
+      "normalized_name": "4wall entertainment nm revolver"
+    },
+    {
+      "security_name": "4Wall Entertainment (NM TL)",
+      "score": 0.0,
+      "raw_es_score": 282.125,
+      "es_scaled": 1.0,
+      "similarity_score": 0.2564,
+      "low_es_confidence": false,
+      "candidate_matched": false,
+      "soi_name": "LAV Gear Holdings, Inc.",
+      "family_name": "4Wall Entertainment",
+      "security_type": "First Lien",
+      "normalized_name": "4wall entertainment nm term loan"
+    },
+    {
+      "security_name": "4Wall Entertainment (Revolver)",
+      "score": 0.0,
+      "raw_es_score": 232.8675,
+      "es_scaled": 1.0,
+      "similarity_score": 0.2222,
+      "low_es_confidence": false,
+      "candidate_matched": false,
+      "soi_name": "LAV Gear Holdings, Inc. - Funded Revolver",
+      "family_name": "4Wall Entertainment",
+      "security_type": "First Lien",
+      "normalized_name": "4wall entertainment revolver"
+    },
+    {
+      "security_name": "4Wall Entertainment (DDTL)",
+      "score": 0.0,
+      "raw_es_score": 214.217,
+      "es_scaled": 1.0,
+      "similarity_score": 0.2449,
+      "low_es_confidence": false,
+      "candidate_matched": false,
+      "soi_name": "LAV Gear Holdings, Inc. - Unfunded Term Loan",
+      "family_name": "4Wall Entertainment",
+      "security_type": "First Lien",
+      "normalized_name": "4wall entertainment delayed draw term loan"
+    }
+  ]
+}
+/* ----------similarity on security name only-------*/
+/*--------------correct match---------------------
+----------------high similarity------------------- */
+{
+  "input": "Infinity Home Services Holdco Amend. 1 DD T/L",
+  "normalized": "infinity home services holdco amendment one dd term loan",
+  "matched": true,
+  "best_match": {
+    "security_name": "Infinity Home Services (Term Loan)",
+    "score": 1.0,
+    "raw_es_score": 261.4903,
+    "es_scaled": 1.0,
+    "similarity_score": 1.0,
+    "low_es_confidence": false,
+    "candidate_matched": true,
+    "soi_name": "Infinity Home Services Holdco, Inc.",
+    "family_name": "Infinity Home Services",
+    "security_type": "First Lien",
+    "normalized_name": "infinity home services term loan"
+  },
+  "matches": [
+    {
+      "security_name": "Infinity Home Services (Term Loan)",
+      "score": 1.0,
+      "raw_es_score": 261.4903,
+      "es_scaled": 1.0,
+      "similarity_score": 1.0,
+      "low_es_confidence": false,
+      "candidate_matched": true,
+      "soi_name": "Infinity Home Services Holdco, Inc.",
+      "family_name": "Infinity Home Services",
+      "security_type": "First Lien",
+      "normalized_name": "infinity home services term loan"
+    },
+    {
+      "security_name": "Infinity Home Services (Revolver)",
+      "score": 1.0,
+      "raw_es_score": 260.9683,
+      "es_scaled": 1.0,
+      "similarity_score": 1.0,
+      "low_es_confidence": false,
+      "candidate_matched": true,
+      "soi_name": "Infinity Home Services Holdco, Inc. - Revolver",
+      "family_name": "Infinity Home Services",
+      "security_type": "First Lien",
+      "normalized_name": "infinity home services revolver"
+    },
+    {
+      "security_name": "Infinity Home Services (Common Equity)",
+      "score": 1.0,
+      "raw_es_score": 110.8515,
+      "es_scaled": 1.0,
+      "similarity_score": 1.0,
+      "low_es_confidence": false,
+      "candidate_matched": true,
+      "soi_name": "IHS Parent Holdings, L.P.",
+      "family_name": "Infinity Home Services",
+      "security_type": "Common Equity",
+      "normalized_name": "infinity home services common equity"
+    },
+    {
+      "security_name": "Infinity Home Services (DDTL)",
+      "score": 0.886,
+      "raw_es_score": 242.004,
+      "es_scaled": 1.0,
+      "similarity_score": 0.7719,
+      "low_es_confidence": false,
+      "candidate_matched": true,
+      "soi_name": "Infinity Home Services Holdco, Inc. - Delayed Draw Term Loan",
+      "family_name": "Infinity Home Services",
+      "security_type": "First Lien",
+      "normalized_name": "infinity home services delayed draw term loan"
+    },
+    {
+      "security_name": "Crane 1 (DDTL)",
+      "score": 0.0,
+      "raw_es_score": 56.7592,
+      "es_scaled": 0.5676,
+      "similarity_score": 0.3824,
+      "low_es_confidence": true,
+      "candidate_matched": false,
+      "soi_name": "CRANE 1 SERVICES, INC. - Unfunded Term Loan",
+      "family_name": "Crane 1",
+      "security_type": "First Lien",
+      "normalized_name": "crane one delayed draw term loan"
+    }
+  ]
+}
+
+/*---events buyer--------*/
+{
+  "input": "Events Buyer, LLC",
+  "normalized": "events buyer",
+  "matched": true,
+  "best_match": {
+    "security_name": "Marketplace Events (Revolver)",
+    "score": 0.8667,
+    "raw_es_score": 168.4147,
+    "es_scaled": 1.0,
+    "similarity_score": 0.6667,
+    "candidate_matched": true,
+    "soi_name": "Marketplace Events LLC - Funded Revolver",
+    "family_name": "Marketplace Events",
+    "security_type": "First Lien"
+  },
+  "matches": [
+    {
+      "security_name": "Marketplace Events (Revolver)",
+      "score": 0.8667,
+      "raw_es_score": 168.4147,
+      "es_scaled": 1.0,
+      "similarity_score": 0.6667,
+      "candidate_matched": true,
+      "soi_name": "Marketplace Events LLC - Funded Revolver",
+      "family_name": "Marketplace Events",
+      "security_type": "First Lien"
+    },
+    {
+      "security_name": "360DG (Term Loan)",
+      "score": 0.0,
+      "raw_es_score": 181.0214,
+      "es_scaled": 1.0,
+      "similarity_score": 0.0,
+      "candidate_matched": false,
+      "soi_name": "Events Buyer, LLC",
+      "family_name": "360DG",
+      "security_type": "First Lien"
+    },
+    {
+      "security_name": "360DG (Revolver)",
+      "score": 0.0,
+      "raw_es_score": 181.0214,
+      "es_scaled": 1.0,
+      "similarity_score": 0.0,
+      "candidate_matched": false,
+      "soi_name": "Events Buyer, LLC",
+      "family_name": "360DG",
+      "security_type": "First Lien"
+    },
+    {
+      "security_name": "360DG (DDTL A)",
+      "score": 0.0,
+      "raw_es_score": 181.0214,
+      "es_scaled": 1.0,
+      "similarity_score": 0.1875,
+      "candidate_matched": false,
+      "soi_name": "Events Buyer, LLC",
+      "family_name": "360DG",
+      "security_type": "First Lien"
+    },
+    {
+      "security_name": "360DG (DDTL B)",
+      "score": 0.0,
+      "raw_es_score": 181.0214,
+      "es_scaled": 1.0,
+      "similarity_score": 0.25,
+      "candidate_matched": false,
+      "soi_name": "Events Buyer, LLC",
+      "family_name": "360DG",
+      "security_type": "First Lien"
+    }
+  ]
+}
+
+
+
+/*-------------------------*/
+{
+  "input": "The Bluebird Group LLC",
+  "normalized": "the bluebird group",
+  "matched": true,
+  "best_match": {
+    "security_name": "Bluebird (Term Loan)",
+    "score": 1.0,
+    "raw_es_score": 301.1807,
+    "es_scaled": 1.0,
+    "similarity_score": 1.0,
+    "candidate_matched": true,
+    "soi_name": "The Bluebird Group LLC",
+    "family_name": "Bluebird",
+    "security_type": "First Lien"
+  },
+  "matches": [
+    {
+      "security_name": "Bluebird (Term Loan)",
+      "score": 1.0,
+      "raw_es_score": 301.1807,
+      "es_scaled": 1.0,
+      "similarity_score": 1.0,
+      "candidate_matched": true,
+      "soi_name": "The Bluebird Group LLC",
+      "family_name": "Bluebird",
+      "security_type": "First Lien"
+    },
+    {
+      "security_name": "Bluebird (Revolver)",
+      "score": 1.0,
+      "raw_es_score": 249.7144,
+      "es_scaled": 1.0,
+      "similarity_score": 1.0,
+      "candidate_matched": true,
+      "soi_name": "The Bluebird Group LLC - Unfunded Revolver",
+      "family_name": "Bluebird",
+      "security_type": "First Lien"
+    },
+    {
+      "security_name": "The Original Cakerie Ltd. (CAD TL)",
+      "score": 0.0,
+      "raw_es_score": 154.9672,
+      "es_scaled": 1.0,
+      "similarity_score": 0.381,
+      "candidate_matched": false,
+      "soi_name": "The Original Cakerie Ltd.",
+      "family_name": "The Original Cakerie",
+      "security_type": "First Lien"
+    },
+    {
+      "security_name": "The Original Cakerie, Co. (US TL)",
+      "score": 0.0,
+      "raw_es_score": 154.9672,
+      "es_scaled": 1.0,
+      "similarity_score": 0.439,
+      "candidate_matched": false,
+      "soi_name": "The Original Cakerie, Co.",
+      "family_name": "The Original Cakerie",
+      "security_type": "First Lien"
+    },
+    {
+      "security_name": "The Original Cakerie Ltd. (CAD Revolver)",
+      "score": 0.0,
+      "raw_es_score": 149.2155,
+      "es_scaled": 1.0,
+      "similarity_score": 0.381,
+      "candidate_matched": false,
+      "soi_name": "The Original Cakerie Ltd. - Funded Revolver",
+      "family_name": "The Original Cakerie",
+      "security_type": "First Lien"
+    }
+  ]
+}

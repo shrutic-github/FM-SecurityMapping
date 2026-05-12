@@ -1,0 +1,954 @@
+### ES-backed mapping response (expects: normalized, matched, best_match, matches[])
+### If your function runs on another port, replace 7071 below.
+
+### Exact-ish sample
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+  "input": "Events Buyer T/L"
+}
+###
+POST http://localhost:7071/api/map-security
+Content-Type: application/json  
+
+{
+  "input": "48Forty Intermediate Holdings C/S"
+}
+### Term loan variant
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+  "input": "LAV Gear Holdings"
+}
+
+### Another known sample
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+  "input": "A1 Garage (Term Loan)"
+}
+
+### Ad-hoc noisy input (tests normalization + ES ranking)
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+  "input": "AFC Industries (DDTL)"
+}
+
+### Another ad-hoc noisy input
+POST http://localhost:7071/api/map-security
+Content-Type: application/json  
+
+{
+  "input": "AFC-Dell Holding DD T/L (12/23)"
+}
+
+### Non-match / low-confidence sample
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+  "input": "Security 101 (Revolver)"
+}
+
+### Lav Gears term loan variant
+POST http://localhost:7071/api/map-security
+Content-Type: application/json  
+
+{
+  "input": "Events Buyer Term Loan"
+}
+### Non-match sample
+POST http://localhost:7071/api/map-security
+Content-Type: application/json  
+
+{
+  "input": "48FORTY INTERMEDIATE HOLDINGS, INC"
+}
+
+###
+POST http://localhost:7071/api/map-security
+Content-Type: application/json  
+
+{
+  "input": "BlueHalo Global (Aegis) T/L 4th Amendment"
+}
+### Another non-match sample
+POST http://localhost:7071/api/map-security
+Content-Type: application/json  
+
+{
+  "input": "Ad.net Acquisition T/L"
+}
+### Noisy input with potential matches
+POST http://localhost:7071/api/map-security
+Content-Type: application/json  
+
+{
+  "input": "The Bluebird Group LLC"
+} 
+### More samples can be added as needed to test various edge cases and scenarios. 
+POST http://localhost:7071/api/map-security
+Content-Type: application/json  
+
+{
+  "input": "The Aegis Technologies Group, LLC"
+}
+###
+POST http://localhost:7071/api/map-security
+Content-Type: application/json          
+
+{
+  "input": "By Light Professional IT Services, LLC - Unfunded Revolver"
+}
+###
+POST http://localhost:7071/api/map-security
+Content-Type: application/json  
+
+{
+  "input": "Centauri Health (Revolver)"
+}
+
+###
+POST http://localhost:7071/api/map-security 
+Content-Type: application/json  
+
+{
+  "input": "BlueHalo Global Holdings, LLC"
+}
+###
+POST http://localhost:7071/api/map-security
+Content-Type: application/json      
+
+{
+  "input": "Dr. Squatch (Term Loan)"
+}
+###
+POST http://localhost:7071/api/map-security
+Content-Type: application/json  
+
+{
+  "input": "GGG Midco DD T/L"
+}
+###
+POST http://localhost:7071/api/map-security
+Content-Type: application/application/json
+
+{
+  "input": "Infinity Home Services Holdco Amend. 1 DD T/L"
+}
+###
+POST http://localhost:7071/api/map-security
+Content-Type: application/json  
+
+{
+  "input": "L APT OPCO, LLC "
+}
+###
+POST http://localhost:7071/api/map-security
+Content-Type: application/json  
+
+{
+  "input": " Management Consulting & Research, LLC "
+}
+###
+POST http://localhost:7071/api/map-security
+Content-Type: application/json  
+
+{
+  "input": "Project Granite Holdings, LLC - Common Equity"
+}
+###
+POST http://localhost:7071/api/map-security
+Content-Type: application/json    
+
+{
+  "input": "Bluebird Group T/L"
+}
+
+###
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+  "input": "Aegis Technologies Group, LLC - Unfunded Revolver"
+}
+### Lightspeed Buyer VT1 R/C
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Lightspeed Buyer VT1 R/C"
+}
+
+### Dr. Squatch T/L
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Dr. Squatch T/L"
+}
+
+### GGG Midco DD T/L
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "GGG Midco DD T/L"
+}
+
+### Infinity Home Services Holdco Amend. 1 DD T/L
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Infinity Home Services Holdco Amend. 1 DD T/L"
+}
+
+### Lash Opco Restatement T/L--MC178414
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Lash Opco Restatement T/L--MC178414"
+}
+
+### OSP Embedded Purchaser Incremental T/L (11/24)
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "OSP Embedded Purchaser Incremental T/L (11/24)"
+}
+
+### Anteriad (MeritDirect) Incremental T/L B
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Anteriad (MeritDirect) Incremental T/L B"
+}
+
+### MeritDirect T/L A (MeritB2B/Anteriad)
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "MeritDirect T/L A (MeritB2B/Anteriad)"
+}
+
+### OSG Topco Holdings LLC - Class A Unit
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "OSG (Common Equity)"
+}
+
+### Pragmatic Institute C/S (03/25)
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Pragmatic Institute C/S (03/25)"
+}
+
+### Paving Lessor Initial T/L
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Paving Lessor Initial T/L"
+}
+
+### Lightspeed Buyer T/L
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Lightspeed Buyer T/L"
+}
+
+### NFS - CFP Holdings Incremental T/L
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "NFS - CFP Holdings Incremental T/L"
+}
+
+### DRS Holdings III Amendment No. 4 Incremental T/L
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "DRS Holdings III Amendment No. 4 Incremental T/L"
+}
+
+### Arcline FM Holdings T/L (7/24) (Fairbanks Morse) - Target
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Arcline FM Holdings T/L (7/24) (Fairbanks Morse) - Target"
+}
+
+### Management Consulting & Research T/L (Systems Planning and Analysis)
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Management Consulting & Research T/L (Systems Planning and Analysis)"
+}
+
+### PlayPower T/L (5/19)
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "PlayPower T/L (5/19)"
+}
+
+### PlayPower T/L (08/24)
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "PlayPower T/L (08/24)"
+}
+
+###
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "TMII Enterprises LLC DDTL"
+}
+### The Track Branson Opco DDTL
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "The Track Branson Opco DDTL"
+}
+
+###
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "The Track Branson Opco DDTL"
+}
+#----------------------------------------------watc ------------
+### Sath Industries LLC
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Sath Industries LLC"
+}
+
+### 48Forty Intermediate Holdings Inc
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "48Forty Intermediate Holdings Inc"
+}
+
+### LAV Gear Holdings Inc
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "LAV Gear Holdings Inc"
+}
+
+### Burgess Point Purchaser Corporation
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Burgess Point Purchaser Corporation"
+}
+
+### Big Top Holdings LLC
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Events Buyer T/L"
+}
+
+### BlueHalo Global Holdings LLC
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "BlueHalo Global Holdings LLC"
+}
+
+### ACP Falcon Buyer Inc
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "ACP Falcon Buyer Inc"
+}
+
+### Kinetic Purchaser LLC
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Kinetic Purchaser LLC"
+}
+
+### Radius Aerospace Inc
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Radius Aerospace Inc"
+}
+
+### RRA Corporate LLC
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "RRA Corporate LLC"
+}
+
+### TMII Enterprises LLC
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "TMII Enterprises LLC"
+}
+
+### TMII Enterprises LLC (Duplicate)
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "TMII Enterprises LLC"
+}
+
+### SV-Aero Holdings LLC
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Sv-Aero Holdings LLC"
+}
+
+### DRS Holdings III Inc
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "DRS Holdings III Inc"
+}
+
+
+### Systems Planning and Analysis Inc
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Systems Planning and Analysis Inc"
+}
+
+### North American Rail Solutions
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "North American Rail Solutions"
+}
+
+### SMX Group LLC
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "SMX Group LLC"
+}#####################################
+
+### STG Distribution LLC
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "STG Distribution LLC"
+}
+
+### Zips Car Wash LLC
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Zips Car Wash LLC"
+}
+#######market and book value 
+### LAV Gear Holdings, Inc.
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "LAV Gear Holdings, Inc."
+}
+
+
+### A1 Garage Equity, LLC
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "A1 Garage Equity, LLC"
+}
+
+### Archer Lewis, LLC
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Archer Lewis, LLC"
+}
+
+### Beta Plus Technologies, Inc.
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Beta Plus Technologies, Inc."
+}
+
+### Rural Sourcing Holdings, Inc.
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Rural Sourcing Holdings, Inc."
+}
+
+### TCG 3.0 Jogger Acquisitionco, Inc.
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "TCG 3.0 Jogger Acquisitionco, Inc."
+}
+
+### Carnegie Dartlet, LLC
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Carnegie Dartlet, LLC"
+}
+
+### Medina Health, LLC
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Medina Health, LLC"
+}
+
+### GAUGE ETE BLOCKER LLC
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "GAUGE ETE BLOCKER LLC"
+}
+
+### EDS TOPCO, LP
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "EDS TOPCO, LP"
+}
+
+### ENC Parent Corporation
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "ENC Parent Corporation"
+}
+
+### Best Practice Associates, LLC
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Best Practice Associates, LLC"
+}
+
+### Infinity Home Services Holdco, Inc.
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Infinity Home Services Holdco, Inc."
+}
+
+### MidOcean JF Holdings Corp.
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "MidOcean JF Holdings Corp."
+}
+
+### 4Wall Entertainment
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "4Wall Entertainment Term Loan"
+}
+
+### Aeronix
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Aeronix"
+}
+
+### Any Hour Services
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Any Hour Services"
+}
+
+### Any Hour Services (Duplicate)
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Any Hour Services"
+}
+
+### Cano Health
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Cano Health"
+}
+
+### Dr. Scholl's
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Dr. Scholl's"
+}
+
+### Infinity Home Services
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Infinity Home Services"
+}
+
+### KNS
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "KNS"
+}
+
+### Recteq
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Recteq"
+}
+
+
+#############Longshort
+### HV Watterson Holdings, LLC - Unfunded Revolver
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "HV Watterson Holdings, LLC - Unfunded Revolver"
+}
+
+### Watchtower Buyer, LLC - Unfunded Revolver
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Watchtower Buyer, LLC - Unfunded Revolver"
+}
+
+### Univista Insurance - Common Equity
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Univista Insurance - Common Equity"
+}
+
+### Project Granite Buyer, Inc. - Unfunded Term Loan
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Project Granite Buyer, Inc. - Unfunded Term Loan"
+}
+
+### Aftermarket Drivetrain Products Holdings, LLC - Common Equity
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Aftermarket Drivetrain Products Holdings, LLC - Common Equity"
+}
+
+### STG Distribution, LLC - Second Out Term Loans
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "STG Distribution, LLC - Second Out Term Loans"
+}
+
+### Rural Sourcing Holdings, Inc. - Unfunded Revolver
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Rural Sourcing Holdings, Inc. - Unfunded Revolver"
+}
+
+### Gauge Schlesinger Coinvest, LLC - Common Equity
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Gauge Schlesinger Coinvest, LLC - Common Equity"
+}
+
+### Pacific Purchaser, LLC - Unfunded Revolver
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Pacific Purchaser, LLC - Unfunded Revolver"
+}
+
+### Aechelon InvestCo, LP - Common Equity
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Aechelon InvestCo, LP - Common Equity"
+}
+
+### TCG 3.0 Jogger Co-Invest, LP - Common Equity
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "TCG 3.0 Jogger Co-Invest, LP - Common Equity"
+}
+
+### Knexus Holdco, LLC - Preferred Equity
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Knexus Holdco, LLC - Preferred Equity"
+}
+
+### Connatix Parent, LLC - Common Equity
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Connatix Parent, LLC - Common Equity"
+}
+
+### Connatix Parent, LLC - Preferred Equity
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Connatix Parent, LLC - Preferred Equity"
+}
+
+### RFMG Parent, LP - Common Equity
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "RFMG Parent, LP - Common Equity"
+}
+
+### Aftermarket Drivetrain Products Holdings, LLC - Common Equity (Duplicate)
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Aftermarket Drivetrain Products Holdings, LLC - Common Equity"
+}
+
+### Project Granite Holdings, LLC - Common Equity
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Project Granite Holdings, LLC - Common Equity"
+}
+
+### NXOF Holdings, Inc. - Common Equity
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "NXOF Holdings, Inc. - Common Equity"
+}
+
+### NXOF Holdings, Inc. - Preferred Equity
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "NXOF Holdings, Inc. - Preferred Equity"
+}
+
+### TWD Parent Holdings, LLC - Common Equity
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "TWD Parent Holdings, LLC - Common Equity"
+}
+
+### TWD Parent Holdings, LLC - Preferred Equity
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "TWD Parent Holdings, LLC - Preferred Equity"
+}
+
+### Watchtower Holdings, LLC - Common Equity
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "Watchtower Holdings, LLC - Common Equity"
+}
+
+### HV Watterson Holdings, LLC - Common Equity
+
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+"input": "HV Watterson Holdings, LLC - Common Equity"
+}

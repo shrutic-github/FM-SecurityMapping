@@ -144,7 +144,7 @@ def search_matches(normalized_query: str) -> list[dict]:
                             "security_name": {
                                 "query": primary_token,
                                 "operator": "and",
-                                "boost": 14,
+                                "boost": 8,
                             }
                         }
                     },
@@ -195,7 +195,7 @@ def search_matches(normalized_query: str) -> list[dict]:
                         "match_phrase": {
                             "security_name": {
                                 "query": normalized_query,
-                                "boost": 8,
+                                "boost": 2,
                             }
                         }
                     },
@@ -204,7 +204,7 @@ def search_matches(normalized_query: str) -> list[dict]:
                             "security_name": {
                                 "query": normalized_query,
                                 "operator": "and",
-                                "boost": 5,
+                                "boost": 2,
                             }
                         }
                     },
@@ -214,7 +214,7 @@ def search_matches(normalized_query: str) -> list[dict]:
                         "match_phrase": {
                             "normalized_soi_name": {
                                 "query": normalized_query,
-                                "boost": 6,
+                                "boost": 10,
                             }
                         }
                     },
@@ -251,7 +251,7 @@ def search_matches(normalized_query: str) -> list[dict]:
                         "match_phrase": {
                             "family_name": {
                                 "query": normalized_query,
-                                "boost": 2,
+                                "boost": 12,
                             }
                         }
                     },
@@ -261,30 +261,30 @@ def search_matches(normalized_query: str) -> list[dict]:
                                 "query": normalized_query,
                                 "operator": "or",
                                 "minimum_should_match": "50%",
-                                "boost": 1,
+                                "boost": 8,
                             }
                         }
                     },
 
                     # ---- Security type (refinement) ----
-                    {
-                        "match_phrase": {
-                            "security_type": {
-                                "query": normalized_query,
-                                "boost": 10,
-                            }
-                        }
-                    },
-                    {
-                        "match": {
-                            "security_type": {
-                                "query": normalized_query,
-                                "operator": "or",
-                                "boost": 3,
-                            }
-                        }
-                    },
-                ],
+                #     {
+                #         "match_phrase": {
+                #             "security_type": {
+                #                 "query": normalized_query,
+                #                 "boost": 10,
+                #             }
+                #         }
+                #     },
+                #     {
+                #         "match": {
+                #             "security_type": {
+                #                 "query": normalized_query,
+                #                 "operator": "or",
+                #                 "boost": 3,
+                #             }
+                #         }
+                #     },
+                 ],
                 "minimum_should_match": 1,
             }
         },

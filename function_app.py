@@ -51,6 +51,83 @@ def _es_scaled(raw_es_score: float) -> float:
     scaled = math.log1p(raw_es_score) / math.log1p(cap)
     return max(0.0, min(scaled, 1.0))
 
+
+# Generic / legal tokens that widen recall on SOI and family fields (strip for broad match only).
+GENERIC_RETRIEVAL_STOPWORDS = frozenset(
+    {
+        "ltd",
+        "inc",
+        "corp",
+        "corporation",
+        "llc",
+        "lp",
+        "plc",
+        "company",
+        "co",
+        "limited",
+        "pvt",
+        "holdings",
+        "holding",
+        "group",
+        "trust",
+        "the",
+        "and",
+        "of",
+        "a",
+        "an",
+        "common",
+        "preferred",
+        "equity",
+        "first",
+        "second",
+        "lien",
+        "liens",
+        "amendment",
+        "amend",
+        "initial",
+        "closing",
+        "date",
+        "new",
+        "money",
+        "class",
+        "series",
+        "unit",
+        "units",
+        "unfunded",
+        "funded",
+        "priority",
+        "fourth",
+        "out",
+        "incremental",
+        "roll",
+        "rollup",
+        "restated",
+        "restatement",
+    }
+)
+
+GENERIC_RETRIEVAL_PHRASES = (
+    "first lien",
+    "second lien",
+    "common equity",
+    "preferred equity",
+    "delayed draw term loan",
+)
+
+
+def clean_query_for_broad_retrieval(normalized_query: str) -> str:
+    """
+    Single-string cleanup (not entity/instrument split): remove generic legal
+    tokens so broad SOI/family matches do not fire on unrelated issuers.
+    """
+    t = (normalized_query or "").strip().lower()
+    for phrase in GENERIC_RETRIEVAL_PHRASES:
+        t = t.replace(phrase, " ")
+    tokens = [w for w in t.split() if w and w not in GENERIC_RETRIEVAL_STOPWORDS]
+    cleaned = " ".join(tokens)
+    return cleaned if cleaned else (normalized_query or "").strip().lower()
+
+
 #-------------------------------
 # Reranking Boost by Type
 #-------------------------------
@@ -121,171 +198,215 @@ def search_matches(normalized_query: str) -> list[dict]:
     index_name = os.environ.get("ES_INDEX", "security_master_v4")
     top_k = int(os.environ.get("MATCH_TOP_K", "20"))
 
-    primary_token = normalized_query.split()[0] if normalized_query else ""
+    cleaned = clean_query_for_broad_retrieval(normalized_query)
+    primary_token = (
+        cleaned.split()[0]
+        if cleaned
+        else (normalized_query.split()[0] if normalized_query else "")
+    )
 
-    # Family-first anchor + weighted Mastercomp security, SOI, security_type (no multi_match).
+    issuer_mm = os.environ.get("ISSUER_GATE_MIN_SHOULD_MATCH", "40%")
+
+    # Issuer gate: at least one meaningful hit on family or SOI (cleaned text).
+    issuer_gate = {
+        "bool": {
+            "should": [
+                {
+                    "match": {
+                        "family_name": {
+                            "query": cleaned,
+                            "operator": "or",
+                            "minimum_should_match": issuer_mm,
+                        }
+                    }
+                },
+                {
+                    "match": {
+                        "soi_name": {
+                            "query": cleaned,
+                            "operator": "or",
+                            "minimum_should_match": issuer_mm,
+                        }
+                    }
+                },
+                {
+                    "match": {
+                        "normalized_soi_name": {
+                            "query": cleaned,
+                            "operator": "or",
+                            "minimum_should_match": issuer_mm,
+                        }
+                    }
+                },
+                {"match_phrase": {"family_name": {"query": cleaned}}},
+                {"match_phrase": {"soi_name": {"query": cleaned}}},
+            ],
+            "minimum_should_match": 1,
+        }
+    }
+
+    should_clauses = [
+        # ---- Anchor (family + token hits on core fields) ----
+        {
+            "term": {
+                "family_name.keyword": {
+                    "value": primary_token,
+                    "case_insensitive": True,
+                    "boost": 30,
+                }
+            }
+        },
+        {
+            "match": {
+                "security_name": {
+                    "query": primary_token,
+                    "operator": "and",
+                    "boost": 8,
+                }
+            }
+        },
+        {
+            "match": {
+                "normalized_name": {
+                    "query": primary_token,
+                    "boost": 10,
+                }
+            }
+        },
+        {
+            "match": {
+                "soi_name": {
+                    "query": primary_token,
+                    "boost": 10,
+                }
+            }
+        },
+        # ---- Security tier (full normalized string = high precision) ----
+        {
+            "term": {
+                "normalized_name.keyword": {
+                    "value": normalized_query,
+                    "boost": 15,
+                }
+            }
+        },
+        {
+            "match_phrase": {
+                "normalized_name": {
+                    "query": normalized_query,
+                    "boost": 10,
+                }
+            }
+        },
+        {
+            "match": {
+                "normalized_name": {
+                    "query": normalized_query,
+                    "operator": "and",
+                    "boost": 7,
+                }
+            }
+        },
+        {
+            "match_phrase": {
+                "security_name": {
+                    "query": normalized_query,
+                    "boost": 2,
+                }
+            }
+        },
+        {
+            "match": {
+                "security_name": {
+                    "query": normalized_query,
+                    "operator": "and",
+                    "boost": 2,
+                }
+            }
+        },
+        # ---- SOI tier (cleaned = broad recall without generic noise) ----
+        {
+            "match_phrase": {
+                "normalized_soi_name": {
+                    "query": cleaned,
+                    "boost": 10,
+                }
+            }
+        },
+        {
+            "match": {
+                "normalized_soi_name": {
+                    "query": cleaned,
+                    "operator": "or",
+                    "minimum_should_match": "50%",
+                    "boost": 4,
+                }
+            }
+        },
+        {
+            "match_phrase": {
+                "soi_name": {
+                    "query": cleaned,
+                    "boost": 5,
+                }
+            }
+        },
+        {
+            "match": {
+                "soi_name": {
+                    "query": cleaned,
+                    "operator": "or",
+                    "minimum_should_match": "50%",
+                    "boost": 3,
+                }
+            }
+        },
+        # ---- Family tier (cleaned) ----
+        {
+            "match_phrase": {
+                "family_name": {
+                    "query": cleaned,
+                    "boost": 12,
+                }
+            }
+        },
+        {
+            "match": {
+                "family_name": {
+                    "query": cleaned,
+                    "operator": "or",
+                    "minimum_should_match": "50%",
+                    "boost": 8,
+                }
+            }
+        },
+        # ---- Security type (low weight; refinement only) ----
+        {
+            "match_phrase": {
+                "security_type": {
+                    "query": normalized_query,
+                    "boost": 1,
+                }
+            }
+        },
+        {
+            "match": {
+                "security_type": {
+                    "query": normalized_query,
+                    "operator": "or",
+                    "boost": 0.5,
+                }
+            }
+        },
+    ]
+
     body = {
         "size": top_k,
         "query": {
             "bool": {
-                "should": [
-                    # ---- Anchor (family + token hits on core fields) ----
-                    {
-                        "term": {
-                            "family_name.keyword": {
-                                "value": primary_token,
-                                "case_insensitive": True,
-                                "boost": 30,
-                            }
-                        }
-                    },
-                    {
-                        "match": {
-                            "security_name": {
-                                "query": primary_token,
-                                "operator": "and",
-                                "boost": 8,
-                            }
-                        }
-                    },
-                    {
-                        "match": {
-                            "normalized_name": {
-                                "query": primary_token,
-                                "boost": 10,
-                            }
-                        }
-                    },
-                    {
-                        "match": {
-                            "soi_name": {
-                                "query": primary_token,
-                                "boost": 10,
-                            }
-                        }
-                    },
-
-                    # ---- Security tier (Mastercomp normalized + display name) ----
-                    {
-                        "term": {
-                            "normalized_name.keyword": {
-                                "value": normalized_query,
-                                "boost": 15,
-                            }
-                        }
-                    },
-                    {
-                        "match_phrase": {
-                            "normalized_name": {
-                                "query": normalized_query,
-                                "boost": 10,
-                            }
-                        }
-                    },
-                    {
-                        "match": {
-                            "normalized_name": {
-                                "query": normalized_query,
-                                "operator": "and",
-                                "boost": 7,
-                            }
-                        }
-                    },
-                    {
-                        "match_phrase": {
-                            "security_name": {
-                                "query": normalized_query,
-                                "boost": 2,
-                            }
-                        }
-                    },
-                    {
-                        "match": {
-                            "security_name": {
-                                "query": normalized_query,
-                                "operator": "and",
-                                "boost": 2,
-                            }
-                        }
-                    },
-
-                    # ---- SOI tier ----
-                    {
-                        "match_phrase": {
-                            "normalized_soi_name": {
-                                "query": normalized_query,
-                                "boost": 10,
-                            }
-                        }
-                    },
-                    {
-                        "match": {
-                            "normalized_soi_name": {
-                                "query": normalized_query,
-                                "operator": "or",
-                                "minimum_should_match": "50%",
-                                "boost": 4,
-                            }
-                        }
-                    },
-                    {
-                        "match_phrase": {
-                            "soi_name": {
-                                "query": normalized_query,
-                                "boost": 5,
-                            }
-                        }
-                    },
-                    {
-                        "match": {
-                            "soi_name": {
-                                "query": normalized_query,
-                                "operator": "or",
-                                "boost": 3,
-                            }
-                        }
-                    },
-
-                    # ---- Family tier ----
-                    {
-                        "match_phrase": {
-                            "family_name": {
-                                "query": normalized_query,
-                                "boost": 12,
-                            }
-                        }
-                    },
-                    {
-                        "match": {
-                            "family_name": {
-                                "query": normalized_query,
-                                "operator": "or",
-                                "minimum_should_match": "50%",
-                                "boost": 8,
-                            }
-                        }
-                    },
-
-                    # ---- Security type (refinement) ----
-                #     {
-                #         "match_phrase": {
-                #             "security_type": {
-                #                 "query": normalized_query,
-                #                 "boost": 10,
-                #             }
-                #         }
-                #     },
-                #     {
-                #         "match": {
-                #             "security_type": {
-                #                 "query": normalized_query,
-                #                 "operator": "or",
-                #                 "boost": 3,
-                #             }
-                #         }
-                #     },
-                 ],
-                "minimum_should_match": 1,
+                "must": [issuer_gate],
+                "should": should_clauses,
+                "minimum_should_match": 0,
             }
         },
         "collapse": {"field": "family_name.keyword"},

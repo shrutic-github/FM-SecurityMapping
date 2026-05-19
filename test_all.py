@@ -1,8 +1,6 @@
-
 import pandas as pd
 import requests
 import time
-
 # -----------------------------
 # CONFIG
 # -----------------------------
@@ -11,10 +9,11 @@ INPUT_FILE = "Security_Mapping_TestCases.xlsx"
 OUTPUT_FILE = "evaluation_results.xlsx"
 TOP_K = 5
 
+# -----------------------------
+# BUILD INPUT
+# borrower + asset/loan type
+# -----------------------------
 
-# -----------------------------
-# BUILD INPUT LOGIC
-# -----------------------------
 def build_input(row):
 
     borrower = str(
@@ -24,24 +23,65 @@ def build_input(row):
     security_name = str(
         row.get("Security Name", "")
     ).strip()
+    
 
-    # Handle NaN values
+    loan_asset_type = str(
+        row.get("Loan/Asset Type", "")
+    ).strip()
+
+    # -----------------------------
+    # Handle NaN
+    # -----------------------------
     borrower = "" if borrower.lower() == "nan" else borrower
-    security_name = "" if security_name.lower() == "nan" else security_name
 
+    security_name = (
+        ""
+        if security_name.lower() == "nan"
+        else security_name
+    )
+
+    loan_asset_type = (
+        ""
+        if loan_asset_type.lower() == "nan"
+        else loan_asset_type
+    )
+
+    # =====================================================
+    # CASE 1:
+    # Borrower exists
+    # Build:
+    # borrower + loan/asset type
+    # =====================================================
     if borrower:
-        return borrower
 
+        instrument = loan_asset_type
+
+        parts = [borrower]
+
+        if instrument:
+            parts.append(instrument)
+
+        return " ".join(parts).strip()
+
+    # =====================================================
+    # CASE 2:
+    # Borrower missing
+    # Use full security name
+    # =====================================================
     elif security_name:
+
         return security_name
 
     return ""
+
 
 # -----------------------------
 # API CALL
 # -----------------------------
 def call_api(input_text):
+
     try:
+
         response = requests.post(
             API_URL,
             json={"input": input_text},
@@ -50,15 +90,20 @@ def call_api(input_text):
 
         if response.status_code == 200:
             return response.json()
-        else:
-            return {"error": f"HTTP {response.status_code}"}
+
+        return {
+            "error": f"HTTP {response.status_code}"
+        }
 
     except Exception as e:
-        return {"error": str(e)}
+
+        return {
+            "error": str(e)
+        }
 
 
 # -----------------------------
-# MAIN TEST RUN
+# MAIN EVALUATION
 # -----------------------------
 def run_evaluation():
 
@@ -66,18 +111,28 @@ def run_evaluation():
 
     results = []
 
-    family_correct_count = 0
-    family_topk_correct_count = 0
+    # -----------------------------
+    # METRICS
+    # -----------------------------
+    family_top1_correct = 0
+    family_topk_correct = 0
 
+    security_top1_correct = 0
+    security_topk_correct = 0
+
+    # -----------------------------
+    # LOOP
+    # -----------------------------
     for idx, row in df.iterrows():
 
         input_text = build_input(row)
 
-        # -----------------------------
-        # EXPECTED FAMILY
-        # -----------------------------
         expected_family = str(
             row.get("Mastercomp Family Name", "")
+        ).strip()
+
+        expected_security = str(
+            row.get("Mastercomp Security", "")
         ).strip()
 
         print(f"[{idx+1}] Testing: {input_text}")
@@ -90,149 +145,260 @@ def run_evaluation():
         if "error" in api_result:
 
             results.append({
+
                 "input": input_text,
 
                 "expected_family": expected_family,
+                "expected_security": expected_security,
+
                 "predicted_family": None,
+                "predicted_security": None,
 
                 "family_correct": False,
                 "family_topk_correct": False,
 
-                "family_rank": None,
+                "security_correct": False,
+                "security_topk_correct": False,
 
-                "score": None,
-                "raw_es_score": None,
+                "family_rank": None,
+                "security_rank": None,
 
                 "status": "ERROR",
+
                 "error": api_result["error"]
             })
 
             continue
 
-        # -----------------------------
-        # BEST MATCH
-        # -----------------------------
-        best_match = api_result.get("best_match") or {}
+        # =====================================================
+        # FAMILY EVALUATION
+        # =====================================================
 
-        predicted_family = (
-            best_match.get("family_name")
+        best_family = api_result.get(
+            "best_family_match"
+        ) or {}
+
+        predicted_family = best_family.get(
+            "family_name"
         )
 
-        # -----------------------------
-        # FAMILY ACCURACY
-        # -----------------------------
         family_correct = (
             predicted_family == expected_family
         )
 
         if family_correct:
-            family_correct_count += 1
+            family_top1_correct += 1
 
-        # -----------------------------
-        # TOP MATCHES
-        # -----------------------------
-        top_matches = api_result.get("matches", [])
+        top_families = api_result.get(
+            "top_matching_families",
+            []
+        )
 
-        top_family_names = []
+        top_family_names = [
+            x.get("family_name")
+            for x in top_families
+        ]
 
-        for m in top_matches:
-
-            top_family_names.append(
-                m.get("family_name")
-            )
-
-        # -----------------------------
-        # FAMILY TOP-K
-        # -----------------------------
-        family_topk_correct = (
+        family_topk = (
             expected_family in top_family_names
         )
 
-        if family_topk_correct:
-            family_topk_correct_count += 1
+        if family_topk:
+            family_topk_correct += 1
+
+        family_rank = None
 
         if expected_family in top_family_names:
-            family_rank = (
-                top_family_names.index(expected_family) + 1
-            )
-        else:
-            family_rank = None
 
-        # -----------------------------
+            family_rank = (
+                top_family_names.index(
+                    expected_family
+                ) + 1
+            )
+
+        # =====================================================
+        # SECURITY EVALUATION
+        # =====================================================
+
+        ranked_securities = api_result.get(
+            "ranked_family_securities",
+            []
+        )
+
+        predicted_security = None
+
+        if ranked_securities:
+            predicted_security = ranked_securities[0].get(
+                "security_name"
+            )
+
+        security_correct = (
+            predicted_security == expected_security
+        )
+
+        if security_correct:
+            security_top1_correct += 1
+
+        ranked_security_names = [
+            s.get("security_name")
+            for s in ranked_securities
+        ]
+
+        security_topk = (
+            expected_security in ranked_security_names[:TOP_K]
+        )
+
+        if security_topk:
+            security_topk_correct += 1
+
+        security_rank = None
+
+        if expected_security in ranked_security_names:
+
+            security_rank = (
+                ranked_security_names.index(
+                    expected_security
+                ) + 1
+            )
+
+        # =====================================================
         # STORE RESULT
-        # -----------------------------
+        # =====================================================
+
         results.append({
 
+            # -----------------------------
+            # INPUT
+            # -----------------------------
             "input": input_text,
 
             # -----------------------------
-            # FAMILY
+            # EXPECTED
             # -----------------------------
             "expected_family": expected_family,
+            "expected_security": expected_security,
+
+            # -----------------------------
+            # PREDICTED
+            # -----------------------------
             "predicted_family": predicted_family,
+            "predicted_security": predicted_security,
+
+            # -----------------------------
+            # FAMILY METRICS
+            # -----------------------------
             "family_correct": family_correct,
 
-            # -----------------------------
-            # SCORES
-            # -----------------------------
-            "score": best_match.get("score"),
-            "raw_es_score": best_match.get("raw_es_score"),
-
-            # -----------------------------
-            # TOP-K FAMILY
-            # -----------------------------
-            "family_top_matches": " | ".join(
-                [str(x) for x in top_family_names]
-            ),
-
-            "family_topk_correct": family_topk_correct,
+            "family_topk_correct": family_topk,
 
             "family_rank": family_rank,
 
             # -----------------------------
-            # MATCH INFO
+            # SECURITY METRICS
             # -----------------------------
-            "matched_flag": api_result.get("matched")
+            "security_correct": security_correct,
+
+            "security_topk_correct": security_topk,
+
+            "security_rank": security_rank,
+
+            # -----------------------------
+            # SCORES
+            # -----------------------------
+            "family_score": best_family.get("score"),
+
+            # -----------------------------
+            # DEBUG
+            # -----------------------------
+            "top_family_matches": " | ".join(
+                [str(x) for x in top_family_names]
+            ),
+
+            "top_security_matches": " | ".join(
+                [str(x) for x in ranked_security_names[:TOP_K]]
+            ),
+
+            "matched_flag": api_result.get(
+                "matched"
+            )
         })
 
         time.sleep(0.05)
 
-    # -----------------------------
+    # =====================================================
     # FINAL METRICS
-    # -----------------------------
+    # =====================================================
+
     total = len(results)
 
-    family_accuracy = (
-        (family_correct_count / total) * 100
+    family_top1_acc = (
+        (family_top1_correct / total) * 100
         if total > 0 else 0
     )
 
-    family_topk_accuracy = (
-        (family_topk_correct_count / total) * 100
+    family_topk_acc = (
+        (family_topk_correct / total) * 100
         if total > 0 else 0
     )
 
-    # -----------------------------
+    security_top1_acc = (
+        (security_top1_correct / total) * 100
+        if total > 0 else 0
+    )
+
+    security_topk_acc = (
+        (security_topk_correct / total) * 100
+        if total > 0 else 0
+    )
+
+    # =====================================================
     # PRINT METRICS
-    # -----------------------------
+    # =====================================================
+
     print("\n=========================")
 
     print(f"Total Cases: {total}")
 
-    print(f"Family Top-1 Accuracy: {family_accuracy:.2f}%")
+    print("\n----- FAMILY -----")
 
-    print(f"Family Top-{TOP_K} Accuracy: {family_topk_accuracy:.2f}%")
+    print(
+        f"Family Top-1 Accuracy: "
+        f"{family_top1_acc:.2f}%"
+    )
+
+    print(
+        f"Family Top-{TOP_K} Accuracy: "
+        f"{family_topk_acc:.2f}%"
+    )
+
+    print("\n----- SECURITY -----")
+
+    print(
+        f"Security Top-1 Accuracy: "
+        f"{security_top1_acc:.2f}%"
+    )
+
+    print(
+        f"Security Top-{TOP_K} Accuracy: "
+        f"{security_topk_acc:.2f}%"
+    )
 
     print("=========================\n")
 
-    # -----------------------------
+    # =====================================================
     # SAVE OUTPUT
-    # -----------------------------
+    # =====================================================
+
     result_df = pd.DataFrame(results)
 
-    result_df.to_excel(OUTPUT_FILE, index=False)
+    result_df.to_excel(
+        OUTPUT_FILE,
+        index=False
+    )
 
-    print(f"✅ Results saved to {OUTPUT_FILE}")
+    print(
+        f"✅ Results saved to {OUTPUT_FILE}"
+    )
 
 
 # -----------------------------
@@ -240,3 +406,4 @@ def run_evaluation():
 # -----------------------------
 if __name__ == "__main__":
     run_evaluation()
+

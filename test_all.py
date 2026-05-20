@@ -23,7 +23,6 @@ def build_input(row):
     security_name = str(
         row.get("Security Name", "")
     ).strip()
-    
 
     loan_asset_type = str(
         row.get("Loan/Asset Type", "")
@@ -47,44 +46,45 @@ def build_input(row):
     )
 
     # =====================================================
-    # CASE 1:
-    # Borrower exists
-    # Build:
-    # borrower + loan/asset type
+    # CASE 1: Borrower exists
+    # family_input  = borrower name only (clean for family retrieval)
+    # security_input = borrower + loan/asset type (for security reranking)
     # =====================================================
     if borrower:
 
-        instrument = loan_asset_type
+        family_input = borrower
 
-        parts = [borrower]
+        security_input = (
+            " ".join([borrower, loan_asset_type]).strip()
+            if loan_asset_type
+            else borrower
+        )
 
-        if instrument:
-            parts.append(instrument)
-
-        return " ".join(parts).strip()
+        return family_input, security_input
 
     # =====================================================
-    # CASE 2:
-    # Borrower missing
-    # Use full security name
+    # CASE 2: Borrower missing — use security name for both
     # =====================================================
     elif security_name:
 
-        return security_name
+        return security_name, security_name
 
-    return ""
+    return "", ""
 
 
 # -----------------------------
 # API CALL
 # -----------------------------
-def call_api(input_text):
+def call_api(family_input, security_input):
 
     try:
 
         response = requests.post(
             API_URL,
-            json={"input": input_text},
+            json={
+                "input": family_input,
+                "security_input": security_input
+            },
             timeout=10
         )
 
@@ -125,7 +125,9 @@ def run_evaluation():
     # -----------------------------
     for idx, row in df.iterrows():
 
-        input_text = build_input(row)
+        family_input, security_input = build_input(row)
+
+        input_text = family_input
 
         expected_family = str(
             row.get("Mastercomp Family Name", "")
@@ -137,7 +139,7 @@ def run_evaluation():
 
         print(f"[{idx+1}] Testing: {input_text}")
 
-        api_result = call_api(input_text)
+        api_result = call_api(family_input, security_input)
 
         # -----------------------------
         # ERROR CASE

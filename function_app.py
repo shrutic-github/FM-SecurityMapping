@@ -159,6 +159,53 @@ def extract_type(q):
 
 
 # -----------------------------
+# Family-Level Type Boost
+# -----------------------------
+def boost_by_type(matches, normalized_query):
+    input_type = extract_type(normalized_query)
+    if not input_type:
+        return matches
+
+    for m in matches:
+        name = (
+            (m.get("normalized_name") or "")
+            + " "
+            + (m.get("top_security") or "")
+        ).lower()
+
+        score = m["score"]
+
+        if input_type == "ddtl":
+            if "delayed draw" in name:
+                score += 0.3
+            elif "term loan" in name:
+                score -= 0.1
+
+        elif input_type == "tl":
+            if "term loan" in name:
+                score += 0.2
+            elif "revolver" in name:
+                score -= 0.1
+
+        elif input_type == "rev":
+            if "revolver" in name:
+                score += 0.2
+            else:
+                score -= 0.1
+
+        elif input_type == "equity":
+            if "equity" in name:
+                score += 0.2
+            else:
+                score -= 0.1
+
+        m["score"] = round(score, 4)
+
+    matches.sort(key=lambda x: x["score"], reverse=True)
+    return matches
+
+
+# -----------------------------
 # Retrieve Best Families
 # -----------------------------
 def search_family_matches(normalized_query: str) -> list[dict]:
@@ -208,6 +255,15 @@ def search_family_matches(normalized_query: str) -> list[dict]:
                 },
                 {
                     "match": {
+                        "soi_name": {
+                            "query": cleaned,
+                            "operator": "or",
+                            "minimum_should_match": issuer_mm,
+                        }
+                    }
+                },
+                {
+                    "match": {
                         "normalized_soi_name": {
                             "query": cleaned,
                             "operator": "or",
@@ -224,7 +280,7 @@ def search_family_matches(normalized_query: str) -> list[dict]:
                 },
                 {
                     "match_phrase": {
-                        "normalized_soi_name": {
+                        "soi_name": {
                             "query": cleaned
                         }
                     }
@@ -238,7 +294,7 @@ def search_family_matches(normalized_query: str) -> list[dict]:
     # -----------------------------
     should_clauses = [
 
-        # strong family anchor
+        # ---- Anchor tier ----
         {
             "term": {
                 "family_name.keyword": {
@@ -248,8 +304,115 @@ def search_family_matches(normalized_query: str) -> list[dict]:
                 }
             }
         },
+        {
+            "match": {
+                "security_name": {
+                    "query": primary_token,
+                    "operator": "and",
+                    "boost": 8,
+                }
+            }
+        },
+        {
+            "match": {
+                "normalized_name": {
+                    "query": primary_token,
+                    "boost": 10,
+                }
+            }
+        },
+        {
+            "match": {
+                "soi_name": {
+                    "query": primary_token,
+                    "boost": 10,
+                }
+            }
+        },
 
-        # family
+        # ---- Security tier ----
+        {
+            "term": {
+                "normalized_name.keyword": {
+                    "value": normalized_query,
+                    "boost": 15,
+                }
+            }
+        },
+        {
+            "match_phrase": {
+                "normalized_name": {
+                    "query": normalized_query,
+                    "boost": 10,
+                }
+            }
+        },
+        {
+            "match": {
+                "normalized_name": {
+                    "query": normalized_query,
+                    "operator": "and",
+                    "boost": 7,
+                }
+            }
+        },
+        {
+            "match_phrase": {
+                "security_name": {
+                    "query": normalized_query,
+                    "boost": 2,
+                }
+            }
+        },
+        {
+            "match": {
+                "security_name": {
+                    "query": normalized_query,
+                    "operator": "and",
+                    "boost": 2,
+                }
+            }
+        },
+
+        # ---- SOI tier ----
+        {
+            "match_phrase": {
+                "normalized_soi_name": {
+                    "query": cleaned,
+                    "boost": 10,
+                }
+            }
+        },
+        {
+            "match": {
+                "normalized_soi_name": {
+                    "query": cleaned,
+                    "operator": "or",
+                    "minimum_should_match": "50%",
+                    "boost": 4,
+                }
+            }
+        },
+        {
+            "match_phrase": {
+                "soi_name": {
+                    "query": cleaned,
+                    "boost": 5,
+                }
+            }
+        },
+        {
+            "match": {
+                "soi_name": {
+                    "query": cleaned,
+                    "operator": "or",
+                    "minimum_should_match": "50%",
+                    "boost": 3,
+                }
+            }
+        },
+
+        # ---- Family tier ----
         {
             "match_phrase": {
                 "family_name": {
@@ -269,42 +432,21 @@ def search_family_matches(normalized_query: str) -> list[dict]:
             }
         },
 
-        # SOI
+        # ---- Type tier ----
         {
             "match_phrase": {
-                "normalized_soi_name": {
-                    "query": cleaned,
-                    "boost": 10,
+                "security_type": {
+                    "query": normalized_query,
+                    "boost": 1,
                 }
             }
         },
         {
             "match": {
-                "normalized_soi_name": {
-                    "query": cleaned,
+                "security_type": {
+                    "query": normalized_query,
                     "operator": "or",
-                    "minimum_should_match": "50%",
-                    "boost": 5,
-                }
-            }
-        },
-
-        # normalized security
-        {
-            "match_phrase": {
-                "normalized_name": {
-                    "query": normalized_query,
-                    "boost": 8,
-                }
-            }
-        },
-
-        {
-            "match": {
-                "normalized_name": {
-                    "query": normalized_query,
-                    "operator": "and",
-                    "boost": 5,
+                    "boost": 0.5,
                 }
             }
         },
@@ -344,6 +486,11 @@ def search_family_matches(normalized_query: str) -> list[dict]:
 
         es_scaled = _es_scaled(raw_es_score)
 
+        norm_sec = (
+            source.get("normalized_security_name")
+            or source.get("normalized_name", "")
+        )
+
         matches.append(
             {
                 "family_name": source.get(
@@ -355,6 +502,18 @@ def search_family_matches(normalized_query: str) -> list[dict]:
                     "security_name",
                     ""
                 ),
+
+                "soi_name": source.get(
+                    "soi_name",
+                    ""
+                ),
+
+                "security_type": source.get(
+                    "security_type",
+                    ""
+                ),
+
+                "normalized_name": norm_sec,
 
                 "score": round(es_scaled, 4),
 
@@ -565,6 +724,7 @@ def map_security_api(
     try:
         body = req.get_json()
         input_string = body.get("input")
+        security_string = body.get("security_input") or input_string
 
         if not input_string:
             return func.HttpResponse(
@@ -577,7 +737,7 @@ def map_security_api(
             )
 
         logging.info(
-            f"Input received: {input_string}"
+            f"Input received: {input_string} | security_input: {security_string}"
         )
 
         # -----------------------------
@@ -622,11 +782,21 @@ def map_security_api(
             "normalized_query"
         ]
 
+        security_query = normalize_input(
+            security_string,
+            conn_string
+        )["normalized_query"]
+
         # -----------------------------
         # Retrieve Families
         # -----------------------------
         family_matches = search_family_matches(
             normalized_query
+        )
+
+        family_matches = boost_by_type(
+            family_matches,
+            security_query
         )
 
         best_family = (
@@ -653,7 +823,7 @@ def map_security_api(
             reranked_securities = (
                 rerank_family_securities(
                     family_securities,
-                    normalized_query
+                    security_query
                 )
             )
 
@@ -668,14 +838,18 @@ def map_security_api(
         result = {
             "input": input_string,
 
+            "security_input": security_string,
+
             "normalized": normalized_query,
+
+            "security_normalized": security_query,
 
             "matched": matched,
 
             "best_family_match": best_family,
 
             "top_matching_families": [
-                {k: v for k, v in f.items() if k != "top_security"}
+                {"family_name": f["family_name"]}
                 for f in family_matches
             ],
 

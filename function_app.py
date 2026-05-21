@@ -7,6 +7,7 @@ import math
 from elasticsearch import Elasticsearch
  
 from normalization import normalize_input
+from config import FAMILY_RETRIEVAL_CONFIG, ASSET_TYPE_BOOST_CONFIG, SECURITY_RETRIEVAL_CONFIG
  
 app = func.FunctionApp()
 ES_CLIENT = None
@@ -72,11 +73,13 @@ GENERIC_RETRIEVAL_STOPWORDS = frozenset(
         "lp",
         "plc",
         "company",
+        "topco",
         "co",
         "limited",
         "pvt",
         "holdings",
         "holding",
+        "holdco",
         "group",
         "trust",
         "the",
@@ -122,7 +125,7 @@ GENERIC_RETRIEVAL_PHRASES = (
     "preferred equity",
     "delayed draw term loan",
     "term loan"
-    
+   
 )
  
  
@@ -222,125 +225,22 @@ def search_family_matches(family_query: str) -> list[dict]:
     top_k = int(os.environ.get("MATCH_TOP_K", "5"))
  
     cleaned_family_query = clean_query_for_broad_retrieval(family_query)
-
+ 
     _tokens = (cleaned_family_query or family_query or "").split()
     primary_token = next((t for t in _tokens if len(t) >= 3), _tokens[0] if _tokens else "")
  
- 
-    issuer_mm = os.environ.get("ISSUER_GATE_MIN_SHOULD_MATCH","40%")
- 
-    # -----------------------------
-    # Issuer Gate
-    # -----------------------------
-    issuer_gate = {
-        "bool": {
-            "should": [
-                {"match": {"normalized_family_name": {"query": cleaned_family_query,"operator": "or","minimum_should_match": issuer_mm,}}},
-                {
-                    "match": {
-                        "normalized_soi_name": {
-                            "query": cleaned_family_query,
-                            "operator": "or",
-                            "minimum_should_match": issuer_mm,
-                        }
-                    }
-                },
-                {
-                    "match_phrase": {
-                        "normalized_family_name": {
-                            "query": cleaned_family_query
-                        }
-                    }
-                },
-            ],
-            "minimum_should_match": 1,
-        }
-    }
     # -----------------------------
     # Family Retrieval Logic
     # -----------------------------
     should_clauses = [
  
-        # ---- Anchor tier ----
-        {
-            "term": {
-                "normalized_family_name.keyword": {
-                    "value": primary_token,
-                    "case_insensitive": True,
-                    "boost": 25,
-                }
-            }
-        },
-        {
-            "match": {
-                "normalized_soi_name": {
-                    "query": primary_token,
-                    "boost": 25,
-                }
-            }
-        },
-        {
-            "match": {
-            "normalized_family_name": {
-            "query": primary_token,   # "osg"
-            "boost": 25,
-        }
-    }
-},
  
-        # ---- Security tier ----
-        {
-            "term": {
-                "normalized_security_name.keyword": {
-                    "value": family_query,
-                    "boost": 20,
-                }
-            }
-        },
-        {
-            "match_phrase": {
-                "normalized_security_name": {
-                    "query": family_query,
-                    "boost": 20,
-                }
-            }
-        },
-        {
-            "match": {
-                "normalized_security_name": {
-                    "query": family_query,
-                    "operator": "and",
-                    "boost": 20,
-                }
-            }
-        },
- 
-        # ---- SOI tier ----
-        {
-            "match_phrase": {
-                "normalized_soi_name": {
-                    "query": cleaned_family_query,
-                    "boost": 12,
-                }
-            }
-        },
-        {
-            "match": {
-                "normalized_soi_name": {
-                    "query": cleaned_family_query,
-                    "operator": "or",
-                    "minimum_should_match": "50%",
-                    "boost": 12,
-                }
-            }
-        },
- 
-        # ---- Family tier ----
+        # # ---- Family tier ----
         {
             "match_phrase": {
                 "normalized_family_name": {
                     "query": cleaned_family_query,
-                    "boost": 12,
+                    "boost": 30,
                 }
             }
         },
@@ -350,7 +250,45 @@ def search_family_matches(family_query: str) -> list[dict]:
                     "query": cleaned_family_query,
                     "operator": "or",
                     "minimum_should_match": "50%",
-                    "boost": 12,
+                    "boost": 15,
+                }
+            }
+        },
+ 
+        # # ---- SOI tier ----
+        {
+            "match_phrase": {
+                "normalized_soi_name": {
+                    "query": cleaned_family_query,
+                    "boost": 25,
+                }
+            }
+        },
+        {
+            "match": {
+                "normalized_soi_name": {
+                    "query": cleaned_family_query,
+                    "operator": "or",
+                    "minimum_should_match": "50%",
+                    "boost": 20,
+                }
+            }
+        },
+        # # ---- Security Name tier ----
+        {
+            "match_phrase": {
+                "normalized_security_name": {
+                    "query": family_query,
+                    "boost": 10,
+                }
+            }
+        },
+        {
+            "match": {
+                "normalized_security_name": {
+                    "query": family_query,
+                    "operator": "or",
+                    "boost": 8,
                 }
             }
         },
@@ -360,9 +298,8 @@ def search_family_matches(family_query: str) -> list[dict]:
         "size": top_k,
         "query": {
             "bool": {
-                "must": [issuer_gate],
                 "should": should_clauses,
-                "minimum_should_match": 0,
+                "minimum_should_match": 1,
             }
         },
  
@@ -398,12 +335,12 @@ def search_family_matches(family_query: str) -> list[dict]:
                     "family_name",
                     ""
                 ),
-
+ 
                 "normalized_family_name": source.get(
                     "normalized_family_name",
                     ""
                 ),
-
+ 
                 "top_security": source.get(
                     "security_name",
                     ""
@@ -435,84 +372,11 @@ def search_family_matches(family_query: str) -> list[dict]:
         reverse=True
     )
  
-    return matches
- 
- 
-# -----------------------------
-# Fetch Securities Of Family
-# -----------------------------
-def fetch_securities_by_family(
-    normalized_family_name: str
-) -> list:
- 
-    es = get_es_client()
- 
-    index_name = os.environ.get(
-        "ES_INDEX",
-        "security_master_v1"
-    )
- 
-    body = {
-        "size": 100,
-        "query": {
-            "term": {
-                "normalized_family_name.keyword": normalized_family_name
-            }
-        },
- 
-        "_source": [
-            "security_name",
-            "security_type",
-            "normalized_soi_name",
-            "normalized_security_name",
-            "normalized_family_name",
-        ],
-    }
- 
-    response = es.search(
-        index=index_name,
-        body=body
-    )
- 
-    hits = response.get("hits",{}).get("hits",[])
- 
-    securities = []
- 
-    for hit in hits:
- 
-        src = hit.get("_source", {})
- 
-        securities.append({
-            "security_name": src.get(
-                "security_name",
-                ""
-            ),
- 
-            "security_type": src.get(
-                "security_type",
-                ""
-            ),
- 
-            "normalized_soi_name": src.get(
-                "normalized_soi_name",
-                ""
-            ),
- 
-            "normalized_security_name": src.get(
-                "normalized_security_name",
-                ""
-            ),
- 
-            "normalized_family_name": src.get(
-                "normalized_family_name",
-                ""
-            ),
- 
-            "score": 0.0
-        })
- 
-    return securities
- 
+    return {
+    "matches": matches,
+    "primary_token": primary_token,
+    "cleaned_family_query": cleaned_family_query,
+}
  
 # -----------------------------
 # ES-Based Security Search
@@ -541,94 +405,74 @@ def search_securities_es(
     should_clauses = [
         # ---- Normalized Security Name Tier ----
         {
-            "term": {
-                "normalized_security_name.keyword": {
-                    "value": security_query,
-                    "boost": 25,
-                    
-                }
-            }
-        },
-        {
             "match_phrase": {
-                "normalized_security_name": {
+                "normalized   _security_name": {
                     "query": security_query,
                     "boost": 30,
                 }
             }
         },
+        
+        # ---- Combination of match(or) on security name and match(or) on soi name ----
         {
-            "match": {
-                "normalized_security_name": {
-                    "query": security_query,
-                    "operator": "and",
-                    "boost": 25,
-                }
+            "multi_match": {
+                "query": security_query,
+                "fields": ["normalized_security_name", "normalized_soi_name"],
+                "type": "cross_fields",
+                "operator": "or",
+                "minimum_should_match": "50%",
+                "boost": 25,
             }
         },
+
         {
             "match": {
                 "normalized_security_name": {
                     "query": security_query,
                     "operator": "or",
                     "minimum_should_match": "50%",
-                    "boost": 30,
+                    "boost": 5,
                 }
             }
         },
 
-        # ---- Normalized SOI Name Tier ----
-        {
-            "match_phrase": {
-                "normalized_soi_name": {
-                    "query": security_query,
-                    "boost": 15,
-                }
-            }
-        },
-        {
-            "match": {
-                "normalized_soi_name": {
-                    "query": security_query,
-                    "operator": "or",
-                    "minimum_should_match": "50%",
-                    "boost": 10,
-                }
-            }
-        },
-
-        # ---- Security Type Tier ----
-        {
-            "term": {
-                "security_type": {
-                    "value": security_query,
-                    "case_insensitive": True,
-                    "boost": 15,
-                }
-            }
-        },
-        {
-            "match_phrase": {
-                "security_type": {
-                    "query": security_query,
-                    "boost": 15,
-                }
-            }
-        }
-    ]
+    #     # ---- Normalized Family Name Tier ----
+        # {
+        #     "match": {
+        #         "normalized_family_name": {
+        #             "query": security_query,
+        #             "operator":"or",
+        #             "minimum_should_match": "35%",
+        #             "boost": 15,
+        #         }
+        #     }
+        # },
+ 
+    #    # ---- Security Type Tier ----
+        # {
+        #     "match":{
+        #         "security_type":{
+        #             "query":security_query,
+        #             "operator":"or",
+        #             "minimum_should_match": "20%",
+        #             "boost": 20,
+        #         }
+        #     }
+        # }
+     ]
  
     # ---- Family score weighting via function_score ----
-    functions = [
-        {
-            "filter": {
-                "term": {
-                    "normalized_family_name.keyword": fam["normalized_family_name"]
-                }
-            },
-            "weight": fam["score"] * family_weight,
-        }
-        for fam in family_matches
-    ]
+    # functions = [
+    #     {
+    #         "filter": {
+    #             "term": {
+    #                 "normalized_family_name.keyword": fam["normalized_family_name"]
+    #             }
+    #         },
+    #         "weight": fam["score"] * family_weight,
+    #     }
+    #     for fam in family_matches
+    # ]
  
     body = {
         "size": 20,
@@ -647,7 +491,7 @@ def search_securities_es(
                         "minimum_should_match": 0,
                     }
                 },
-                "functions": functions,
+                #"functions": functions,
                 "score_mode": "sum",
                 "boost_mode": "sum",
             }
@@ -770,9 +614,22 @@ def map_security_api(
         # -----------------------------
         # Retrieve Families
         # -----------------------------
-        family_matches = search_family_matches(
+ 
+        family_result = search_family_matches(
             family_query
-        )
+)
+ 
+        family_matches = family_result[  "matches" ]
+           
+       
+        primary_token = family_result[
+ 
+             "primary_token"
+        ]
+ 
+        cleaned_family_query = family_result[
+             "cleaned_family_query"
+        ]
  
         family_matches = boost_by_type(
             family_matches,
@@ -793,16 +650,31 @@ def map_security_api(
         # -----------------------------
         if best_family:
  
+            # Search securities across all candidate families
             reranked_securities = search_securities_es(
                 security_query,
                 family_matches
             )
  
-            if reranked_securities:
+            if reranked_securities and reranked_securities[0]["score"] > 0.0:
                 matched = True
-                best_family["top_security"] = (
-                    reranked_securities[0]["security_name"]
-                )
+                best_sec = reranked_securities[0]
+                
+                # # Align the best_family to the actual family of the top security
+                # matching_family = next(
+                #     (f for f in family_matches if f["normalized_family_name"] == best_sec["normalized_family_name"]),
+                #     best_family
+                # )
+ 
+                
+                best_family["top_security"] = best_sec["security_name"]
+                best_family["normalized_security_name"] = best_sec["normalized_security_name"]
+                best_family["security_type"] = best_sec["security_type"]
+                best_family["security_score"] = best_sec["score"]
+            else:
+                matched = False
+                best_family["top_security"] = None
+                best_family["security_score"] = 0.0
  
         # -----------------------------
         # Final Response
@@ -812,18 +684,19 @@ def map_security_api(
  
             "security_input": security_string,
  
-            "normalized": family_query,
+            "normalized_input": family_query,
  
             "security_normalized": security_query,
  
             "matched": matched,
+ 
+            "cleaned_family_query": cleaned_family_query,
  
             "best_family_match": best_family,
  
             "top_matching_families": [
                 {
                     "family_name": f["family_name"],
-                    "normalized_family_name": f["normalized_family_name"]
                 }
                 for f in family_matches
             ],

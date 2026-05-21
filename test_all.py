@@ -49,17 +49,19 @@ def build_input(row):
     # =====================================================
     # CASE 1: Borrower exists
     # family_input  = borrower name only (clean for family retrieval)
-    # security_input = borrower + loan/asset type (for security reranking)
+    # security_input = security name (if present) or borrower + loan/asset type
     # =====================================================
     if borrower:
- 
         family_input = borrower
  
-        security_input = (
-            " ".join([borrower, loan_asset_type]).strip()
-            if loan_asset_type
-            else borrower
-        )
+        if security_name:
+            security_input = security_name
+        else:
+            security_input = (
+                " ".join([borrower, loan_asset_type]).strip()
+                if loan_asset_type
+                else borrower
+            )
  
         return family_input, security_input
  
@@ -71,6 +73,7 @@ def build_input(row):
         return security_name, security_name
  
     return "", ""
+ 
  
  
 # -----------------------------
@@ -128,9 +131,9 @@ def run_evaluation():
     end_time = None
     for idx, row in df.iterrows():
         text_case_category = row["TestCase Catagory"]
-        if text_case_category != "Company Match":
-            print(f"skipping {idx}")
-            continue
+        # if text_case_category != "Security Match":
+        #     print(f"skipping {idx}")
+        #     continue
  
         end_time = datetime.now()
         print(end_time - start_time)
@@ -207,7 +210,7 @@ def run_evaluation():
             best_family.get("family_name")
             or best_family.get("normalized_family_name")
         )
-
+ 
         family_correct = (
             predicted_family == expected_family
         )
@@ -224,18 +227,18 @@ def run_evaluation():
             x.get("family_name") or x.get("normalized_family_name")
             for x in top_families
         ]
-
+ 
         family_topk = (
             expected_family in top_family_names
         )
-
+ 
         if family_topk:
             family_topk_correct += 1
-
+ 
         family_rank = None
-
+ 
         if expected_family in top_family_names:
-
+ 
             family_rank = (
                 top_family_names.index(expected_family) + 1
             )
@@ -249,12 +252,12 @@ def run_evaluation():
             []
         )
  
-        predicted_security = None
+        predicted_security = (
+         best_family.get("top_security")
+         if best_family
+        else None
+    )
  
-        if ranked_securities:
-            predicted_security = ranked_securities[0].get(
-                "security_name"
-            )
  
         security_correct = (
             predicted_security == expected_security
@@ -297,41 +300,28 @@ def run_evaluation():
             "input": input_text,
             "source_file_type": source_file_type,
             "text_case_category": text_case_category,
+            "security_input":api_result.get("security_input"),
+            "family_query_to_es": api_result.get("normalized_input"),
  
-            # -----------------------------
-            # EXPECTED
-            # -----------------------------
             "expected_family": expected_family,
-            "expected_security": expected_security,
- 
-            # -----------------------------
-            # PREDICTED
-            # -----------------------------
             "predicted_family": predicted_family,
-            "predicted_security": predicted_security,
- 
-            # -----------------------------
-            # FAMILY METRICS
-            # -----------------------------
             "family_correct": family_correct,
- 
             "family_topk_correct": family_topk,
- 
             "family_rank": family_rank,
  
-            # -----------------------------
-            # SECURITY METRICS
-            # -----------------------------
+            "expected_security": expected_security,
+            "predicted_security": predicted_security,
             "security_correct": security_correct,
- 
             "security_topk_correct": security_topk,
- 
             "security_rank": security_rank,
+ 
+           
  
             # -----------------------------
             # SCORES
             # -----------------------------
             "family_score": best_family.get("score"),
+            "security_score": best_family.get("security_score"),
  
             # -----------------------------
             # DEBUG
@@ -400,7 +390,7 @@ def run_evaluation():
  
     result_df = pd.DataFrame(results)
  
-    result_df = result_df[result_df["text_case_category"] == "Company Match"]
+    #result_df = result_df[result_df["text_case_category"] == "Security Match"]
  
     file_type_rows = []
  
@@ -462,6 +452,8 @@ def run_evaluation():
 # -----------------------------
 if __name__ == "__main__":
     run_evaluation()
+ 
+ 
  
  
  

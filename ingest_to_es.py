@@ -6,10 +6,10 @@ import uuid
 from datetime import datetime, timezone
 
 
-INDEX_NAME = os.environ.get("ES_INDEX", "security_master_v4")
+INDEX_NAME = os.environ.get("ES_INDEX", "security_master_v1")
 INPUT_FILE = os.environ.get(
     "ES_INPUT",
-    "pflt_security_mapping_unique_normalized.csv"
+    "Base_data_soimapping mastercomp\pflt_security_mapping_unique_normalized.csv"
 )
 
 MAPPING_FILE = "es_index_mapping.json"
@@ -125,6 +125,11 @@ def generate_actions():
             else None
         )
 
+        family_norm_col = (
+            "normalized_family_name"
+            if "normalized_family_name" in reader.fieldnames
+            else None
+        )
         for row in reader:
 
             # flexible security name matching
@@ -169,6 +174,11 @@ def generate_actions():
                 "normalized_soi_name": (
                     (row.get(soi_norm_col) or "").strip()
                     if soi_norm_col else ""
+                ),
+
+                "normalized_family_name": (
+                    (row.get(family_norm_col) or "").strip()
+                    if family_norm_col else ""
                 ),
 
                 "ingested_at": datetime.now(

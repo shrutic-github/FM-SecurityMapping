@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import pandas as pd; df = pd.read_excel\\('Security_Mapping_TestCases.xlsx'\\); mask = df['TestCase Catagory'] == 'Security Match'; print\\(df[mask][['Mastercomp Family Name']].head\\(15\\)\\)\")"
+    ]
+  }
+}

@@ -213,7 +213,8 @@ def normalize_csv_security_names(
     input_csv,
     output_csv,
     security_name_header="Security Name",
-    soi_name_header="SOI Name"
+    soi_name_header="SOI Name",
+    fam_name_header="Family Name"
 ):
 
     import csv
@@ -227,7 +228,8 @@ def normalize_csv_security_names(
 
         fieldnames = reader.fieldnames + [
             "normalized_security_name",
-            "normalized_soi_name"
+            "normalized_soi_name",
+            "normalized_family_name"
         ]
 
         writer = csv.DictWriter(outfile, fieldnames=fieldnames)
@@ -236,9 +238,11 @@ def normalize_csv_security_names(
         for row in reader:
             sec = row.get(security_name_header, "")
             soi = row.get(soi_name_header, "")
+            fam = row.get(fam_name_header, "")
 
             row["normalized_security_name"] = normalize(sec, conn_string)
             row["normalized_soi_name"] = normalize(soi, conn_string)
+            row["normalized_family_name"] = normalize(fam, conn_string ,STOPWORDS=False)
 
             writer.writerow(row)
 

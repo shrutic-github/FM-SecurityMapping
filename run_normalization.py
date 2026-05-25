@@ -1,8 +1,9 @@
 from normalization import normalize_csv_security_names
 
 normalize_csv_security_names(
-    input_csv="pflt_security_mapping_unique.csv",
-    output_csv="pflt_security_mapping_unique_normalized.csv",
+    input_csv="Base_data_soimapping mastercomp\\pflt_security_mapping_unique.csv",
+    output_csv="Base_data_soimapping mastercomp\\pflt_security_mapping_unique_normalized.csv",
     security_name_header="master_comp_security_name", 
-    soi_name_header="soi_name"             
+    soi_name_header="soi_name",      
+    fam_name_header="family_name"
 )

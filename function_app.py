@@ -125,7 +125,7 @@ GENERIC_RETRIEVAL_PHRASES = (
     "preferred equity",
     "delayed draw term loan",
     "term loan"
-   
+    
 )
  
  

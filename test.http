@@ -21,8 +21,8 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Ad.net Acquisition, LLC",
-  "security_input": "Ad.net Acquisition T/L"
+  "input": "48forty Intermediate Holdings, Inc.",
+  "security_input": "48Forty Intermediate Holdings C/S"
 }
 
 ### 4
@@ -745,11 +745,23 @@ Content-Type: application/json
 }
 
 ### 84
+### 83
 POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
   "input": "TCG 3.0 Jogger Co-Invest, LP - Common Equity"
+  "input": "Aechelon Technology, Inc.",
+  "security_input": "Aechelon InvestCo, LP - Common Equity"
+}
+
+### 84
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
+
+{
+  "input": "TCG 3.0 Jogger Acquisitionco, Inc.",
+  "security_input": "TCG 3.0 Jogger Co-Invest, LP - Common Equity"
 }
 
 ### 85
@@ -757,7 +769,8 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Knexus Holdco, LLC - Preferred Equity"
+  "input": "C5MI Acquisition, LLC",
+  "security_input": "Knexus Holdco, LLC - Preferred Equity"
 }
 
 ### 86
@@ -765,7 +778,8 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Connatix Parent, LLC - Common Equity"
+  "input": "Connatix Buyer, Inc.",
+  "security_input": "Connatix Parent, LLC - Common Equity"
 }
 
 ### 87
@@ -773,7 +787,8 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Connatix Parent, LLC - Preferred Equity"
+  "input": "Connatix Buyer, Inc.",
+  "security_input": "Connatix Parent, LLC - Preferred Equity"
 }
 
 ### 88
@@ -781,7 +796,8 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "RFMG Parent, LP - Common Equity"
+  "input": "Rancho Health MSO, Inc.",
+  "security_input": "RFMG Parent, LP - Common Equity"
 }
 
 ### 89
@@ -789,9 +805,11 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Project Granite Holdings, LLC - Common Equity"
+  "input": "Project Granite Buyer, Inc.",
+  "security_input": "Project Granite Holdings, LLC - Common Equity"
 }
 
+### 90
 ### 90
 POST http://localhost:7071/api/map-security
 Content-Type: application/json
@@ -799,8 +817,11 @@ Content-Type: application/json
 {
   "input": "Tyto Athene, LLC",
   "security_input": "NXOF Holdings, Inc. - Common Equity"
+  "input": "Tyto Athene, LLC",
+  "security_input": "NXOF Holdings, Inc. - Common Equity"
 }
 
+### 91
 ### 91
 POST http://localhost:7071/api/map-security
 Content-Type: application/json
@@ -808,13 +829,18 @@ Content-Type: application/json
 {
   "input": "Tyto Athene, LLC",
   "security_input": "NXOF Holdings, Inc. - Preferred Equity"
+  "input": "Tyto Athene, LLC",
+  "security_input": "NXOF Holdings, Inc. - Preferred Equity"
 }
 
+### 92
 ### 92
 POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
+  "input": "The Vertex Companies, LLC",
+  "security_input": "TWD Parent Holdings, LLC - Common Equity"
   "input": "The Vertex Companies, LLC",
   "security_input": "TWD Parent Holdings, LLC - Common Equity"
 }

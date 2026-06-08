@@ -104,6 +104,15 @@ def expand_tokens(tokens, conn_string):
     i = 0
     while i < len(tokens):
 
+          # Phrase match: "revolving loan" -> "revolver"
+        if i < len(tokens) - 1:
+            phrase = f"{tokens[i].lower()} {tokens[i + 1].lower()}"
+
+            if phrase in abbrev_map:
+                expanded.append(abbrev_map[phrase])
+                i += 2
+                continue
+
         # 🔥 Combine tokens (t + l → tl)
         if i < len(tokens) - 1:
             combined = standardize_token(tokens[i] + tokens[i + 1])

@@ -302,6 +302,7 @@ def run_evaluation():
             "text_case_category": text_case_category,
             "security_input":api_result.get("security_input"),
             "family_query_to_es": api_result.get("normalized_input"),
+            "security_query_to_es": api_result.get("security_normalized"),
  
             "expected_family": expected_family,
             "predicted_family": predicted_family,

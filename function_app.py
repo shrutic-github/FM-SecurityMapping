@@ -406,7 +406,7 @@ def search_securities_es(
         # ---- Normalized Security Name Tier ----
         {
             "match_phrase": {
-                "normalized   _security_name": {
+                "normalized_security_name": {
                     "query": security_query,
                     "boost": 30,
                 }
@@ -431,8 +431,19 @@ def search_securities_es(
                     "query": security_query,
                     "operator": "or",
                     "minimum_should_match": "50%",
-                    "boost": 5,
+                    "boost": 10,
                 }
+            }
+        },
+
+        {
+            "multi_match": {
+                "query": security_query,
+                "fields": ["normalized_security_name", "normalized_soi_name"],
+                "type": "cross_fields",
+                "operator": "or",
+                "minimum_should_match": "10%",
+                "boost": 10,
             }
         },
 

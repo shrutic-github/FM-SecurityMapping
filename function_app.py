@@ -623,6 +623,79 @@ def map_security_api(
         )["normalized_query"]
  
         # -----------------------------
+        # Check for Mapped Security Bypass (Indirect Match)
+        # -----------------------------
+        try:
+            es_client = get_es_client()
+            index_name = os.environ.get("ES_INDEX", "security_master_v4")
+            
+            bypass_res = es_client.search(
+                index=index_name,
+                body={
+                    "size": 1,
+                    "query": {
+                        "bool": {
+                            "must": [
+                                { "term": { "is_alias": True } },
+                                { "term": { "normalized_family_name.keyword": family_query } },
+                                { "term": { "normalized_security_name.keyword": security_query } }
+                            ]
+                        }
+                    }
+                }
+            )
+            
+            bypass_hits = bypass_res.get("hits", {}).get("hits", [])
+            if bypass_hits:
+                bypass_source = bypass_hits[0]["_source"]
+                master_details = bypass_source.get("master_security_details", {})
+                
+                best_family = {
+                    "family_name": master_details.get("family_name", ""),
+                    "normalized_family_name": master_details.get("normalized_family_name", ""),
+                    "top_security": master_details.get("security_name", ""),
+                    "soi_name": master_details.get("soi_name", ""),
+                    "security_type": master_details.get("security_type", ""),
+                    "normalized_security_name": master_details.get("normalized_security_name", ""),
+                    "score": 1.0,
+                    "raw_es_score": 1.0,
+                    "security_score": 1.0,
+                    "indirect_match": True
+                }
+                
+                result = {
+                    "input": family_string,
+                    "security_input": security_string,
+                    "normalized_input": family_query,
+                    "security_normalized": security_query,
+                    "matched": True,
+                    "cleaned_family_query": family_query,
+                    "best_family_match": best_family,
+                    "top_matching_families": [
+                        { "family_name": master_details.get("family_name", "") }
+                    ],
+                    "ranked_family_securities": [
+                        {
+                            "security_name": master_details.get("security_name", ""),
+                            "security_type": master_details.get("security_type", ""),
+                            "normalized_soi_name": master_details.get("normalized_soi_name", ""),
+                            "normalized_security_name": master_details.get("normalized_security_name", ""),
+                            "normalized_family_name": master_details.get("normalized_family_name", ""),
+                            "score": 1.0
+                        }
+                    ],
+                    "indirect_matched": True
+                }
+                logging.info(f"Bypass Match Found for raw inputs: {family_string} | {security_string}")
+                return func.HttpResponse(
+                    json.dumps(result),
+                    status_code=200,
+                    mimetype="application/json"
+                )
+        except Exception as e:
+            logging.error(f"Bypass lookup failed: {e}")
+
+        # -----------------------------
         # Retrieve Families
         # -----------------------------
  

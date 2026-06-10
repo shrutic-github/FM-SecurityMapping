@@ -1,7 +1,32 @@
 import pandas as pd
 import requests
 import time
-from datetime import datetime
+from datetime import datetime, timezone
+import json
+import hashlib
+from elasticsearch import Elasticsearch
+from normalization import normalize
+
+# -----------------------------
+# ES CONFIG
+# -----------------------------
+try:
+    with open("local.settings.json") as f:
+        config_data = json.load(f)["Values"]
+    ES_CLIENT = Elasticsearch(
+        config_data.get("ES_URL"),
+        basic_auth=(config_data.get("ES_USERNAME"), config_data.get("ES_PASSWORD")),
+        verify_certs=config_data.get("ES_VERIFY_CERTS", "true").lower() == "true"
+    )
+    POSTGRES_CONN = config_data.get("POSTGRES_CONN")
+    ES_INDEX = config_data.get("ES_INDEX", "security_master_v4")
+    print("ES Client initialized in test script successfully.")
+except Exception as e:
+    print("Failed to initialize ES client in test script:", e)
+    ES_CLIENT = None
+    POSTGRES_CONN = None
+    ES_INDEX = "security_master_v4"
+
 # -----------------------------
 # CONFIG
 # -----------------------------
@@ -130,6 +155,8 @@ def run_evaluation():
     start_time = datetime.now()
     end_time = None
     for idx, row in df.iterrows():
+        if idx >= 5:
+            break
         text_case_category = row["TestCase Catagory"]
         # if text_case_category != "Security Match":
         #     print(f"skipping {idx}")
@@ -265,6 +292,53 @@ def run_evaluation():
  
         if security_correct:
             security_top1_correct += 1
+            
+            if ES_CLIENT:
+                try:
+                    # Find original master document
+                    master_res = ES_CLIENT.search(
+                        index=ES_INDEX,
+                        body={
+                            "size": 1,
+                            "query": {
+                                "term": {
+                                    "security_name.keyword": expected_security
+                                }
+                            }
+                        }
+                    )
+                    master_hits = master_res.get("hits", {}).get("hits", [])
+                    master_doc = master_hits[0]["_source"] if master_hits else None
+                    
+                    # Normalize raw inputs using postgres abbreviation mappings
+                    norm_fam = normalize(family_input, POSTGRES_CONN)
+                    norm_sec = normalize(security_input, POSTGRES_CONN)
+                    
+                    mapping_doc = {
+                        "is_alias": True,
+                        "normalized_security_name": norm_sec,
+                        "normalized_family_name": norm_fam,
+                        
+                        "filetype": source_file_type,
+                        "company_name": family_input,
+                        "security_name": security_input,
+                        "ids": str(idx),
+                        "loan_type": str(row.get("Loan/Asset Type") or ""),
+                        "mapped_security_name": expected_security,
+                        "mapped_family_name": expected_family,
+                        "master_security_details": master_doc,
+                        "ingested_at": datetime.now(timezone.utc).isoformat()
+                    }
+                    
+                    doc_id = hashlib.sha256(f"{norm_fam}|{norm_sec}".encode("utf-8")).hexdigest()
+                    print(f"   [MAPPING SAVE] Storing mapping: '{family_input}' | '{security_input}' -> '{expected_security}' (ID: {doc_id})")
+                    ES_CLIENT.index(
+                        index=ES_INDEX,
+                        id=doc_id,
+                        body=mapping_doc
+                    )
+                except Exception as e:
+                    print(f"   [MAPPING SAVE ERROR] Failed to save mapping: {e}")
  
         ranked_security_names = [
             s.get("security_name")

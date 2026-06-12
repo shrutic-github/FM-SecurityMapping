@@ -4,6 +4,7 @@ import azure.functions as func
 import psycopg2
 import json
 import math
+import time
 from elasticsearch import Elasticsearch
  
 from normalization import normalize_input
@@ -551,6 +552,7 @@ def search_securities_es(
 def map_security_api(
     req: func.HttpRequest
 ) -> func.HttpResponse:
+    start_time = time.perf_counter()
  
     logging.info(
         "Received mapping request"
@@ -560,8 +562,11 @@ def map_security_api(
         body = req.get_json()
         family_string = body.get("input")
         security_string = body.get("security_input") or family_string
+        file_type = body.get("file_type") or body.get("filetype")
  
         if not family_string:
+            total_time_ms = (time.perf_counter() - start_time) * 1000
+            logging.info(f"FAILED AFTER {total_time_ms:.2f} ms")
             return func.HttpResponse(
                 json.dumps({
                     "error": "Input string is required"
@@ -576,37 +581,11 @@ def map_security_api(
         )
  
         # -----------------------------
-        # PostgreSQL Validation
-        # -----------------------------
-        try:
- 
-            conn_string = os.environ.get(
-                "POSTGRES_CONN"
-            )
- 
-            if not conn_string:
-                raise Exception(
-                    "POSTGRES_CONN not found"
-                )
- 
-            conn = psycopg2.connect(
-                conn_string
-            )
- 
-            conn.close()
- 
-        except Exception as e:
- 
-            logging.error(
-                f"PostgreSQL connection failed: {e}"
-            )
- 
-        # -----------------------------
         # Normalize
         # -----------------------------
-        conn_string = os.environ.get(
-            "POSTGRES_CONN"
-        )
+        conn_string = os.environ.get("POSTGRES_CONN")
+        if not conn_string:
+            raise Exception("POSTGRES_CONN not found")
  
         normalized_result = normalize_input(
             family_string,
@@ -629,17 +608,21 @@ def map_security_api(
             es_client = get_es_client()
             index_name = os.environ.get("ES_INDEX", "security_master_v4")
             
+            must_clauses = [
+                { "term": { "is_alias": True } },
+                { "term": { "normalized_family_name.keyword": family_query } },
+                { "term": { "normalized_security_name.keyword": security_query } }
+            ]
+            if file_type:
+                must_clauses.append({ "term": { "filetype": file_type } })
+                
             bypass_res = es_client.search(
                 index=index_name,
                 body={
                     "size": 1,
                     "query": {
                         "bool": {
-                            "must": [
-                                { "term": { "is_alias": True } },
-                                { "term": { "normalized_family_name.keyword": family_query } },
-                                { "term": { "normalized_security_name.keyword": security_query } }
-                            ]
+                            "must": must_clauses
                         }
                     }
                 }
@@ -660,7 +643,7 @@ def map_security_api(
                     "score": 1.0,
                     "raw_es_score": 1.0,
                     "security_score": 1.0,
-                    "indirect_match": True
+                    "historical_match": True
                 }
                 
                 result = {
@@ -684,9 +667,13 @@ def map_security_api(
                             "score": 1.0
                         }
                     ],
-                    "indirect_matched": True
+                    "historical_matched": True
                 }
-                logging.info(f"Bypass Match Found for raw inputs: {family_string} | {security_string}")
+                logging.info(f"Historical Match Found for raw inputs: {family_string} | {security_string}")
+                total_time_ms = (time.perf_counter() - start_time) * 1000
+                logging.info(
+                    f"TOTAL MATCH TIME = {total_time_ms:.2f} ms"
+                )
                 return func.HttpResponse(
                     json.dumps(result),
                     status_code=200,
@@ -694,14 +681,14 @@ def map_security_api(
                 )
         except Exception as e:
             logging.error(f"Bypass lookup failed: {e}")
-
+ 
         # -----------------------------
         # Retrieve Families
         # -----------------------------
  
         family_result = search_family_matches(
             family_query
-)
+        )
  
         family_matches = family_result[  "matches" ]
            
@@ -789,6 +776,10 @@ def map_security_api(
                 reranked_securities,
         }
  
+        total_time_ms = (time.perf_counter() - start_time) * 1000
+        logging.info(
+            f"TOTAL MATCH TIME = {total_time_ms:.2f} ms"
+        )
         return func.HttpResponse(
             json.dumps(result),
             status_code=200,
@@ -801,6 +792,10 @@ def map_security_api(
             f"Error: {str(e)}"
         )
  
+        total_time_ms = (time.perf_counter() - start_time) * 1000
+        logging.info(
+            f"FAILED AFTER {total_time_ms:.2f} ms"
+        )
         return func.HttpResponse(
             json.dumps({
                 "error": str(e)

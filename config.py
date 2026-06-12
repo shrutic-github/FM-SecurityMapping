@@ -50,24 +50,23 @@ ASSET_TYPE_BOOST_CONFIG = {
 # -----------------------------
 SECURITY_RETRIEVAL_CONFIG = {
     # Normalized security name matches
-    "term_sec_keyword_boost": 20,
     "match_phrase_sec_boost": 30,
-    "match_sec_and_boost": 25,
-    "match_sec_or_boost": 30,
+    
+    # Combination of match(or) on security name and match(or) on soi name (cross_fields)
+    "match_sec_cross_fields_boost": 25,
+    "match_sec_cross_fields_min_should_match": "50%",
+    
+    # Or-match on normalized_security_name
+    "match_sec_or_boost": 10,
     "match_sec_or_min_should_match": "50%",
+
+    # Combination of match(or) on security name and match(or) on soi name (cross_fields, broad match)
+    "match_sec_cross_fields_broad_boost": 10,
+    "match_sec_cross_fields_broad_min_should_match": "10%",
     
-    # Normalized SOI name matches
-    "match_phrase_soi_boost": 15,
-    "match_soi_or_boost": 10,
-    "match_soi_or_min_should_match": "50%",
-    
-    # Normalized Family name matches
-    "match_phrase_family_boost": 15,
-    "match_family_or_boost": 10,
-    "match_family_or_min_should_match": "50%",
-    
-    # Security Type match
-    "match_phrase_sec_type_boost": 15,
-    "match_sec_type_or_boost":20,
-    "match_sec_type_or_min_should_match":"70%"
+    # Inactive/Commented-out tiers in function_app.py Phase 2 query:
+    # "match_family_or_boost": 15,
+    # "match_family_or_min_should_match": "35%",
+    # "match_sec_type_or_boost": 20,
+    # "match_sec_type_or_min_should_match": "20%"
 }

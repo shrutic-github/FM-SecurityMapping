@@ -4,7 +4,6 @@ import azure.functions as func
 import psycopg2
 import json
 import math
-import time
 from elasticsearch import Elasticsearch
  
 from normalization import normalize_input
@@ -151,64 +150,64 @@ def clean_query_for_broad_retrieval(family_query: str) -> str:
 # -----------------------------
 # Extract Security Type
 # -----------------------------
-def extract_type(q):
-    q = q.lower()
-    if "delayed draw" in q:
-        return "ddtl"
-    elif "term loan" in q:
-        return "tl"
-    elif "revolver" in q:
-        return "rev"
-    elif "equity" in q:
-        return "equity"
-    return None
+# def extract_type(q):
+#     q = q.lower()
+#     if "delayed draw" in q:
+#         return "ddtl"
+#     elif "term loan" in q:
+#         return "tl"
+#     elif "revolver" in q:
+#         return "rev"
+#     elif "equity" in q:
+#         return "equity"
+#     return None
  
  
 # -----------------------------
 # Family-Level Type Boost
 # -----------------------------
-def boost_by_type(matches, family_query):
-    input_type = extract_type(family_query)
-    if not input_type:
-        return matches
+# def boost_by_type(matches, family_query):
+#     input_type = extract_type(family_query)
+#     if not input_type:
+#         return matches
  
-    for m in matches:
-        name = (
-            (m.get("normalized_name") or "")
-            + " "
-            + (m.get("top_security") or "")
-        ).lower()
+#     for m in matches:
+#         name = (
+#             (m.get("normalized_security_name") or "")
+#             + " "
+#             + (m.get("top_security") or "")
+#         ).lower()
  
-        score = m["score"]
+#         score = m["score"]
  
-        if input_type == "ddtl":
-            if "delayed draw" in name:
-                score += 0.3
-            elif "term loan" in name:
-                score -= 0.1
+#         if input_type == "ddtl":
+#             if "delayed draw" in name:
+#                 score += 0.3
+#             elif "term loan" in name:
+#                 score -= 0.1
  
-        elif input_type == "tl":
-            if "term loan" in name:
-                score += 0.2
-            elif "revolver" in name:
-                score -= 0.1
+#         elif input_type == "tl":
+#             if "term loan" in name:
+#                 score += 0.2
+#             elif "revolver" in name:
+#                 score -= 0.1
  
-        elif input_type == "rev":
-            if "revolver" in name:
-                score += 0.2
-            else:
-                score -= 0.1
+#         elif input_type == "rev":
+#             if "revolver" in name:
+#                 score += 0.2
+#             else:
+#                 score -= 0.1
  
-        elif input_type == "equity":
-            if "equity" in name:
-                score += 0.2
-            else:
-                score -= 0.1
+#         elif input_type == "equity":
+#             if "equity" in name:
+#                 score += 0.2
+#             else:
+#                 score -= 0.1
  
-        m["score"] = round(score, 4)
+#         m["score"] = round(score, 4)
  
-    matches.sort(key=lambda x: x["score"], reverse=True)
-    return matches
+#     matches.sort(key=lambda x: x["score"], reverse=True)
+#     return matches
  
  
 # -----------------------------
@@ -220,7 +219,7 @@ def search_family_matches(family_query: str) -> list[dict]:
  
     index_name = os.environ.get(
         "ES_INDEX",
-        "security_master_v1"
+        "security_master_v"
     )
  
     top_k = int(os.environ.get("MATCH_TOP_K", "5"))
@@ -299,6 +298,9 @@ def search_family_matches(family_query: str) -> list[dict]:
         "size": top_k,
         "query": {
             "bool": {
+                "must_not": [
+                    { "term": { "is_alias": True } }
+                ],
                 "should": should_clauses,
                 "minimum_should_match": 1,
             }
@@ -391,7 +393,7 @@ def search_securities_es(
  
     index_name = os.environ.get(
         "ES_INDEX",
-        "security_master_v1"
+        "security_master_v4"
     )
  
     family_weight = float(
@@ -499,6 +501,13 @@ def search_securities_es(
                                 }
                             }
                         ],
+                        "must_not": [
+                            {
+                                "term": {
+                                    "is_alias": True
+                                }
+                            }
+                        ],
                         "should": should_clauses,
                         "minimum_should_match": 0,
                     }
@@ -552,7 +561,6 @@ def search_securities_es(
 def map_security_api(
     req: func.HttpRequest
 ) -> func.HttpResponse:
-    start_time = time.perf_counter()
  
     logging.info(
         "Received mapping request"
@@ -562,11 +570,8 @@ def map_security_api(
         body = req.get_json()
         family_string = body.get("input")
         security_string = body.get("security_input") or family_string
-        file_type = body.get("file_type") or body.get("filetype")
  
         if not family_string:
-            total_time_ms = (time.perf_counter() - start_time) * 1000
-            logging.info(f"FAILED AFTER {total_time_ms:.2f} ms")
             return func.HttpResponse(
                 json.dumps({
                     "error": "Input string is required"
@@ -581,8 +586,14 @@ def map_security_api(
         )
  
         # -----------------------------
+        # PostgreSQL Validation
+        # -----------------------------
+       
+ 
+        # -----------------------------
         # Normalize
         # -----------------------------
+        
         conn_string = os.environ.get("POSTGRES_CONN")
         if not conn_string:
             raise Exception("POSTGRES_CONN not found")
@@ -608,21 +619,17 @@ def map_security_api(
             es_client = get_es_client()
             index_name = os.environ.get("ES_INDEX", "security_master_v4")
             
-            must_clauses = [
-                { "term": { "is_alias": True } },
-                { "term": { "normalized_family_name.keyword": family_query } },
-                { "term": { "normalized_security_name.keyword": security_query } }
-            ]
-            if file_type:
-                must_clauses.append({ "term": { "filetype": file_type } })
-                
             bypass_res = es_client.search(
                 index=index_name,
                 body={
                     "size": 1,
                     "query": {
                         "bool": {
-                            "must": must_clauses
+                            "must": [
+                                { "term": { "is_alias": True } },
+                                { "term": { "normalized_family_name.keyword": family_query } },
+                                { "term": { "normalized_security_name.keyword": security_query } }
+                            ]
                         }
                     }
                 }
@@ -631,14 +638,22 @@ def map_security_api(
             bypass_hits = bypass_res.get("hits", {}).get("hits", [])
             if bypass_hits:
                 bypass_source = bypass_hits[0]["_source"]
-                master_details = bypass_source.get("master_security_details", {})
+                master_details = bypass_source.get("master_security_details", {}) or {}
+                if master_details is None:
+                    master_details = {}
+                
+                metadata = bypass_source.get("metadata", {}) or {}
+                if metadata is None:
+                    metadata = {}
+                
+                sec_type = master_details.get("security_type", "") or metadata.get("loan_type", "")
                 
                 best_family = {
                     "family_name": master_details.get("family_name", ""),
                     "normalized_family_name": master_details.get("normalized_family_name", ""),
                     "top_security": master_details.get("security_name", ""),
                     "soi_name": master_details.get("soi_name", ""),
-                    "security_type": master_details.get("security_type", ""),
+                    "security_type": sec_type,
                     "normalized_security_name": master_details.get("normalized_security_name", ""),
                     "score": 1.0,
                     "raw_es_score": 1.0,
@@ -660,7 +675,7 @@ def map_security_api(
                     "ranked_family_securities": [
                         {
                             "security_name": master_details.get("security_name", ""),
-                            "security_type": master_details.get("security_type", ""),
+                            "security_type": sec_type,
                             "normalized_soi_name": master_details.get("normalized_soi_name", ""),
                             "normalized_security_name": master_details.get("normalized_security_name", ""),
                             "normalized_family_name": master_details.get("normalized_family_name", ""),
@@ -670,10 +685,6 @@ def map_security_api(
                     "historical_matched": True
                 }
                 logging.info(f"Historical Match Found for raw inputs: {family_string} | {security_string}")
-                total_time_ms = (time.perf_counter() - start_time) * 1000
-                logging.info(
-                    f"TOTAL MATCH TIME = {total_time_ms:.2f} ms"
-                )
                 return func.HttpResponse(
                     json.dumps(result),
                     status_code=200,
@@ -681,14 +692,14 @@ def map_security_api(
                 )
         except Exception as e:
             logging.error(f"Bypass lookup failed: {e}")
- 
+
         # -----------------------------
         # Retrieve Families
         # -----------------------------
  
         family_result = search_family_matches(
             family_query
-        )
+)
  
         family_matches = family_result[  "matches" ]
            
@@ -702,10 +713,10 @@ def map_security_api(
              "cleaned_family_query"
         ]
  
-        family_matches = boost_by_type(
-            family_matches,
-            family_query
-        )
+        # family_matches = boost_by_type(
+        #     family_matches,
+        #     family_query
+        # )
  
         best_family = (
             family_matches[0]
@@ -776,10 +787,6 @@ def map_security_api(
                 reranked_securities,
         }
  
-        total_time_ms = (time.perf_counter() - start_time) * 1000
-        logging.info(
-            f"TOTAL MATCH TIME = {total_time_ms:.2f} ms"
-        )
         return func.HttpResponse(
             json.dumps(result),
             status_code=200,
@@ -792,10 +799,6 @@ def map_security_api(
             f"Error: {str(e)}"
         )
  
-        total_time_ms = (time.perf_counter() - start_time) * 1000
-        logging.info(
-            f"FAILED AFTER {total_time_ms:.2f} ms"
-        )
         return func.HttpResponse(
             json.dumps({
                 "error": str(e)
@@ -806,3 +809,4 @@ def map_security_api(
         )
  
  
+      

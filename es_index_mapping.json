@@ -90,42 +90,16 @@
           }
         }
       },
-      "raw_security_name": {
-        "type": "text",
-        "fields": {
-          "keyword": {
-            "type": "keyword",
-            "ignore_above": 1024
-          }
-        }
-      },
-      "ids": {
-        "type": "keyword"
-      },
       "loan_type": {
         "type": "keyword"
-      },
-      "mapped_security_name": {
-        "type": "text",
-        "fields": {
-          "keyword": {
-            "type": "keyword",
-            "ignore_above": 1024
-          }
-        }
-      },
-      "mapped_family_name": {
-        "type": "text",
-        "fields": {
-          "keyword": {
-            "type": "keyword",
-            "ignore_above": 1024
-          }
-        }
       },
       "master_security_details": {
         "type": "object",
         "enabled": false
+      },
+      "metadata": {
+        "type": "object",
+        "dynamic": true
       }
     }
   }

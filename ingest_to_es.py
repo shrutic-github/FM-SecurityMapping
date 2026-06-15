@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timezone
 
 
-INDEX_NAME = os.environ.get("ES_INDEX", "security_master_v1")
+INDEX_NAME = os.environ.get("ES_INDEX", "security_master_v4")
 INPUT_FILE = os.environ.get(
     "ES_INPUT",
     "Base_data_soimapping mastercomp\pflt_security_mapping_unique_normalized.csv"

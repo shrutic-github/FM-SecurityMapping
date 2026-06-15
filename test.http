@@ -13,7 +13,7 @@ Content-Type: application/json
 
 {
   "input": "48forty Intermediate Holdings, Inc.",
-  "security_input": "48Forty Intermediate Holdings C/S"
+  "security_input": "48Forty Intermediate Holdings common equity 1506"
 }
 
 ### 3
@@ -31,7 +31,7 @@ Content-Type: application/json
 
 {
   "input": "Aechelon Technology Inc.",
-  "security_input": "Aechelon Technology  T/L"
+  "security_input": "Aechelon Technology  T/L "
 }
 
 ### 5

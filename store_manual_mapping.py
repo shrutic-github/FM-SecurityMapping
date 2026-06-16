@@ -56,10 +56,10 @@ def store_manual_mapping(source_family, source_security, target_security_name, f
     # 4. Construct the mapping document to match the updated schema
     mapping_doc = {
         "is_alias": True,
-        "normalized_family_name": norm_fam,
-        "normalized_security_name": norm_sec,
         "company_name": source_family,
+        "normalized_company_name": norm_fam,
         "security_name": source_security,
+        "normalized_security_name": norm_sec,
         "filetype": filetype,
         "loan_type": loan_type or (master_doc.get("security_type", "") if master_doc else ""),
         "master_security_details": master_doc,

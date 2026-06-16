@@ -291,17 +291,17 @@ for idx, row in df.iterrows():
 
             "is_alias": True,
 
-            "normalized_family_name":
-                norm_fam,
-
-            "normalized_security_name":
-                norm_sec,
-
             "company_name":
                 family_input,
 
+            "normalized_company_name":
+                norm_fam,
+
             "security_name":
                 security_input,
+
+            "normalized_security_name":
+                norm_sec,
 
             "filetype":
                 clean(

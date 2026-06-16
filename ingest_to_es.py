@@ -110,8 +110,8 @@ def generate_actions():
         if "normalized_security_name" in reader.fieldnames:
             norm_col = "normalized_security_name"
 
-        elif "normalized_name" in reader.fieldnames:
-            norm_col = "normalized_name"
+        # elif "normalized_name" in reader.fieldnames:
+        #     norm_col = "normalized_name"
 
         else:
             raise ValueError(

@@ -625,18 +625,30 @@ def map_security_api(
                     "size": 1,
                     "query": {
                         "bool": {
-                            "must": [
-                                { "term": { "is_alias": True } },
-                                { "term": { "normalized_family_name.keyword": family_query } },
-                                { 
-                                    "match": { 
-                                    "normalized_security_name": {
-                                        "query": security_query,
-                                        "minimum_should_match": "80%"
-            }
-        } 
-    }
-]
+                            "should": [
+                                {
+                                    "bool": {
+                                        "boost": 2.0,
+                                        "must": [
+                                            { "term": { "is_alias": True } },
+                                            { "term": { "normalized_company_name.keyword": family_query } },
+                                            { "term": { "normalized_security_name.keyword": security_query } }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "bool": {
+                                        "must": [
+                                            { "term": { "normalized_family_name.keyword": family_query } },
+                                            { "term": { "normalized_security_name.keyword": security_query } }
+                                        ],
+                                        "must_not": [
+                                            { "term": { "is_alias": True } }
+                                        ]
+                                    }
+                                }
+                            ],
+                            "minimum_should_match": 1
                         }
                     }
                 }
@@ -645,43 +657,49 @@ def map_security_api(
             bypass_hits = bypass_res.get("hits", {}).get("hits", [])
             if bypass_hits:
                 bypass_source = bypass_hits[0]["_source"]
+                is_alias = bypass_source.get("is_alias", False)
                 
-                # Check match type (exact historical vs indirect)
-                stored_normalized_sec = bypass_source.get("normalized_security_name", "")
-                is_exact = (stored_normalized_sec == security_query)
-                match_type = "historical" if is_exact else "indirect"
+                if is_alias:
+                    # Check match type (exact historical vs indirect)
+                    stored_normalized_sec = bypass_source.get("normalized_security_name", "")
+                    is_exact = (stored_normalized_sec == security_query)
+                    match_type = "historical" if is_exact else "indirect"
+                    
+                    master_details = bypass_source.get("master_security_details", {}) or {}
+                    metadata = bypass_source.get("metadata", {}) or {}
+                else:
+                    master_details = bypass_source
+                    metadata = {}
+                    match_type = "direct"
                 
-                master_details = bypass_source.get("master_security_details", {}) or {}
                 if master_details is None:
                     master_details = {}
-                
-                metadata = bypass_source.get("metadata", {}) or {}
                 if metadata is None:
                     metadata = {}
                 
                 sec_type = master_details.get("security_type", "") or metadata.get("loan_type", "")
                 
-                best_family = {
-                    "family_name": master_details.get("family_name", ""),
-                    "normalized_family_name": master_details.get("normalized_family_name", ""),
-                    "top_security": master_details.get("security_name", ""),
-                    "soi_name": master_details.get("soi_name", ""),
-                    "security_type": sec_type,
-                    "normalized_security_name": master_details.get("normalized_security_name", ""),
-                    "score": 1.0,
-                    "raw_es_score": 1.0,
-                    "security_score": 1.0,
-                    "match_type": match_type,
-                }
+                best_family = dict(master_details)
+                best_family.pop("normalized_name", None)
+                best_family["security_type"] = sec_type
+                best_family["score"] = 1.0
+                best_family["raw_es_score"] = 1.0
+                best_family["security_score"] = 1.0
+                best_family["match_type"] = match_type
+                if "top_security" not in best_family and "security_name" in best_family:
+                    best_family["top_security"] = best_family["security_name"]
                 
                 result = {
-                    "input": family_string,
+                    "company_input": family_string,
                     "security_input": security_string,
-                    "normalized_input": family_query,
-                    "security_normalized": security_query,
+                    "normalized_company_query": family_query,
+                    "normalized_security_query": security_query,
                     "matched": True,
-                    "cleaned_family_query": family_query,
-                    "best_family_match": best_family,
+                    "mapped_security": master_details.get("security_name", "") if is_alias else None,
+                    "mapped_family": master_details.get("family_name", "") if is_alias else None,
+                    "filetype": bypass_source.get("filetype", "") if is_alias else None,
+                    "mapped_at": bypass_source.get("ingested_at", "") if is_alias else None,
+                    "mastercomp_document": best_family,
                     "top_matching_families": [
                         { "family_name": master_details.get("family_name", "") }
                     ],
@@ -695,7 +713,6 @@ def map_security_api(
                             "score": 1.0
                         }
                     ],
-                     
                 }
                 logging.info(f"Historical Match ({match_type}) Found for raw inputs: {family_string} | {security_string}")
                 return func.HttpResponse(
@@ -775,21 +792,24 @@ def map_security_api(
         # Final Response
         # -----------------------------
         result = {
-            "input": family_string,
+            "company_input": family_string,
 
             "security_input": security_string,
 
-            "normalized_input": family_query,
+            "normalized_company_query": family_query,
 
-            "security_normalized": security_query,
+            "normalized_security_query": security_query,
 
             "matched": matched,
 
             "match_type": "direct" if matched else None,
 
-            "cleaned_family_query": cleaned_family_query,
+            "mapped_security": None,
+            "mapped_family": None,
+            "filetype": None,
+            "mapped_at": None,
 
-            "best_family_match": best_family,
+            "mastercomp_document": best_family,
 
             "top_matching_families": [
                 {

@@ -72,6 +72,15 @@
           }
         }
       },
+      "normalized_company_name": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 1024
+          }
+        }
+      },
       "ingested_at": {
         "type": "date"
       },

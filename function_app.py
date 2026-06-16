@@ -628,8 +628,15 @@ def map_security_api(
                             "must": [
                                 { "term": { "is_alias": True } },
                                 { "term": { "normalized_family_name.keyword": family_query } },
-                                { "term": { "normalized_security_name.keyword": security_query } }
-                            ]
+                                { 
+                                    "match": { 
+                                    "normalized_security_name": {
+                                        "query": security_query,
+                                        "minimum_should_match": "80%"
+            }
+        } 
+    }
+]
                         }
                     }
                 }
@@ -638,6 +645,12 @@ def map_security_api(
             bypass_hits = bypass_res.get("hits", {}).get("hits", [])
             if bypass_hits:
                 bypass_source = bypass_hits[0]["_source"]
+                
+                # Check match type (exact historical vs indirect)
+                stored_normalized_sec = bypass_source.get("normalized_security_name", "")
+                is_exact = (stored_normalized_sec == security_query)
+                match_type = "historical" if is_exact else "indirect"
+                
                 master_details = bypass_source.get("master_security_details", {}) or {}
                 if master_details is None:
                     master_details = {}
@@ -658,7 +671,7 @@ def map_security_api(
                     "score": 1.0,
                     "raw_es_score": 1.0,
                     "security_score": 1.0,
-                    "historical_match": True
+                    "match_type": match_type,
                 }
                 
                 result = {
@@ -682,9 +695,9 @@ def map_security_api(
                             "score": 1.0
                         }
                     ],
-                    "historical_matched": True
+                     
                 }
-                logging.info(f"Historical Match Found for raw inputs: {family_string} | {security_string}")
+                logging.info(f"Historical Match ({match_type}) Found for raw inputs: {family_string} | {security_string}")
                 return func.HttpResponse(
                     json.dumps(result),
                     status_code=200,
@@ -763,26 +776,28 @@ def map_security_api(
         # -----------------------------
         result = {
             "input": family_string,
- 
+
             "security_input": security_string,
- 
+
             "normalized_input": family_query,
- 
+
             "security_normalized": security_query,
- 
+
             "matched": matched,
- 
+
+            "match_type": "direct" if matched else None,
+
             "cleaned_family_query": cleaned_family_query,
- 
+
             "best_family_match": best_family,
- 
+
             "top_matching_families": [
                 {
                     "family_name": f["family_name"],
                 }
                 for f in family_matches
             ],
- 
+
             "ranked_family_securities":
                 reranked_securities,
         }

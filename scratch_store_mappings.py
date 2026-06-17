@@ -20,10 +20,7 @@ ES_CLIENT = Elasticsearch(
         config_data.get("ES_PASSWORD")
     ),
     verify_certs=(
-        config_data.get(
-            "ES_VERIFY_CERTS",
-            "true"
-        ).lower() == "true"
+        config_data.get("ES_VERIFY_CERTS", "true").lower() == "true"
     )
 )
 
@@ -32,10 +29,7 @@ try:
 except Exception:
     POSTGRES_CONN = config_data.get("POSTGRES_CONN")
 
-ES_INDEX = config_data.get(
-    "ES_INDEX",
-    "security_master_v4"
-)
+ES_INDEX = config_data.get("ES_INDEX", "security_master_v4")
 
 print(
     f"Connected to ES: "
@@ -214,9 +208,18 @@ for idx, row in df.iterrows():
             body={
                 "size": 1,
                 "query": {
-                    "term": {
-                        "security_name.keyword":
-                        expected_security
+                    "bool": {
+                        "must": [
+                            {
+                                "term": {
+                                    "security_name.keyword":
+                                    expected_security
+                                }
+                            }
+                        ],
+                        "must_not": [
+                            {"term": {"is_alias": True}}
+                        ]
                     }
                 }
             }
@@ -239,50 +242,21 @@ for idx, row in df.iterrows():
             print(
                 f"[{idx+1}] "
                 f"Master security not found: "
-                f"{expected_security}"
+                f"{expected_security} — storing with blank master fields"
             )
 
-            master_doc = {
-                "family_name":
-                    expected_family,
-
-                "security_name":
-                    expected_security,
-
-                "normalized_family_name":
-                    norm_fam,
-
-                "normalized_security_name":
-                    norm_sec,
-            }
+            master_doc = {}
 
         # --------------------------------------
-        # Dynamic metadata
+        # Metadata — identifier/reference cols
         # --------------------------------------
         metadata = {}
 
-        for col in row.index:
-
-            col_name = str(col)
-
-            if any(
-                k in col_name.lower()
-                for k in [
-                    "id",
-                    "loanxid",
-                    "identifier",
-                    "cusip",
-                    "isin",
-                    "ticker",
-                    "ref"
-                ]
-            ):
-                value = row[col]
-
-                if pd.notna(value):
-                    metadata[col_name] = str(
-                        value
-                    ).strip()
+        for col in ["loanxid", "Identifier", "source_file_id", "Asset_Primary IDAssetID_Name"]:
+            if col in row.index and pd.notna(row[col]):
+                val = str(row[col]).strip()
+                if val and val.lower() not in ("nan", "none", "null"):
+                    metadata[col] = val
 
         # --------------------------------------
         # Historical mapping document
@@ -319,6 +293,28 @@ for idx, row in df.iterrows():
 
             "master_security_details":
                 master_doc,
+
+            # flat searchable mirror of master_security_details
+            "master_family_name":
+                master_doc.get("family_name", ""),
+
+            "master_normalized_family_name":
+                master_doc.get("normalized_family_name", ""),
+
+            "master_security_name":
+                master_doc.get("security_name", ""),
+
+            "master_normalized_security_name":
+                master_doc.get("normalized_security_name", ""),
+
+            "master_soi_name":
+                master_doc.get("soi_name", ""),
+
+            "master_normalized_soi_name":
+                master_doc.get("normalized_soi_name", ""),
+
+            "master_security_type":
+                master_doc.get("security_type", ""),
 
             "metadata":
                 metadata,

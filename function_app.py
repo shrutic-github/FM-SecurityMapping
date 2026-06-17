@@ -334,39 +334,13 @@ def search_family_matches(family_query: str) -> list[dict]:
  
         matches.append(
             {
-                "family_name": source.get(
-                    "family_name",
-                    ""
-                ),
- 
-                "normalized_family_name": source.get(
-                    "normalized_family_name",
-                    ""
-                ),
- 
-                "top_security": source.get(
-                    "security_name",
-                    ""
-                ),
- 
-                "soi_name": source.get(
-                    "soi_name",
-                    ""
-                ),
- 
-                "security_type": source.get(
-                    "security_type",
-                    ""
-                ),
- 
-                "normalized_security_name": norm_sec,
- 
-                "score": round(es_scaled, 4),
- 
-                "raw_es_score": round(
-                    raw_es_score,
-                    4
-                ),
+                "family_name": source.get("family_name",""),
+                "normalized_family_name": source.get("normalized_family_name","" ),
+                "top_security": source.get("security_name",""),
+                "soi_name": source.get("soi_name",""),
+                "security_type": source.get("security_type",""),
+                "normalized_security_name": norm_sec,"score": round(es_scaled, 4),
+                "raw_es_score": round(raw_es_score,4),
             }
         )
  
@@ -374,19 +348,66 @@ def search_family_matches(family_query: str) -> list[dict]:
         key=lambda x: x["score"],
         reverse=True
     )
- 
+
+    # ---- Alias search: Phase 1 addition ----
+    seen_family_names = {m["normalized_family_name"] for m in matches}
+
+    alias_family_body = {
+        "size": top_k,
+        "query": {
+            "bool": {
+                "filter": [{"term": {"is_alias": True}}],
+                "should": [
+                    {"match_phrase": {"master_normalized_family_name": {"query": cleaned_family_query, "boost": 30}}},
+                    {"match": {"master_normalized_family_name": {"query": cleaned_family_query, "operator": "or", "minimum_should_match": "70%", "boost": 15}}},
+                    {"match": {"master_normalized_soi_name": {"query": cleaned_family_query, "operator": "or", "minimum_should_match": "70%", "boost": 20}}},
+                ],
+                "minimum_should_match": 1,
+            }
+        },
+        "collapse": {"field": "master_normalized_family_name.keyword"},
+    }
+
+    alias_family_hits = es.search(
+        index=index_name, body=alias_family_body
+    ).get("hits", {}).get("hits", [])
+
+    for hit in alias_family_hits:
+        source = hit.get("_source", {})
+        msd = source.get("master_security_details") or {}
+
+        norm_fam = source.get("master_normalized_family_name", "") or msd.get("normalized_family_name", "")
+        if not norm_fam or norm_fam in seen_family_names:
+            continue
+
+        raw_es_score = float(hit.get("_score", 0.0))
+        matches.append({
+            "family_name": source.get("master_family_name", "") or msd.get("family_name", ""),
+            "normalized_family_name": norm_fam,
+            "top_security": source.get("master_security_name", "") or msd.get("security_name", ""),
+            "soi_name": source.get("master_soi_name", "") or msd.get("soi_name", ""),
+            "security_type": source.get("master_security_type", "") or msd.get("security_type", ""),
+            "normalized_security_name": source.get("master_normalized_security_name", "") or msd.get("normalized_security_name", ""),
+            "score": round(_es_scaled(raw_es_score), 4),
+            "raw_es_score": round(raw_es_score, 4),
+        })
+        seen_family_names.add(norm_fam)
+
+    matches.sort(key=lambda x: x["score"], reverse=True)
+
     return {
-    "matches": matches,
-    "primary_token": primary_token,
-    "cleaned_family_query": cleaned_family_query,
-}
- 
+        "matches": matches[:top_k],
+        "primary_token": primary_token,
+        "cleaned_family_query": cleaned_family_query,
+    }
+
 # -----------------------------
 # ES-Based Security Search
 # -----------------------------
 def search_securities_es(
     security_query: str,
-    family_matches: list
+    family_matches: list,
+    family_query: str = ""
 ) -> list:
  
     es = get_es_client()
@@ -449,18 +470,6 @@ def search_securities_es(
                 "boost": 10,
             }
         },
-
-    #     # ---- Normalized Family Name Tier ----
-        # {
-        #     "match": {
-        #         "normalized_family_name": {
-        #             "query": security_query,
-        #             "operator":"or",
-        #             "minimum_should_match": "35%",
-        #             "boost": 15,
-        #         }
-        #     }
-        # },
  
     #    # ---- Security Type Tier ----
         # {
@@ -474,19 +483,6 @@ def search_securities_es(
         #     }
         # }
      ]
- 
-    # ---- Family score weighting via function_score ----
-    # functions = [
-    #     {
-    #         "filter": {
-    #             "term": {
-    #                 "normalized_family_name.keyword": fam["normalized_family_name"]
-    #             }
-    #         },
-    #         "weight": fam["score"] * family_weight,
-    #     }
-    #     for fam in family_matches
-    # ]
  
     body = {
         "size": 20,
@@ -533,16 +529,17 @@ def search_securities_es(
         index=index_name,
         body=body
     ).get("hits", {}).get("hits", [])
- 
+
     securities = []
- 
+    seen_security_names = set()
+
     for hit in hits:
         src = hit.get("_source", {})
         sec_name = src.get("security_name", "")
- 
+
         if not sec_name.strip():
             continue
- 
+
         securities.append({
             "security_name": sec_name,
             "security_type": src.get("security_type", ""),
@@ -551,7 +548,67 @@ def search_securities_es(
             "normalized_family_name": src.get("normalized_family_name", ""),
             "score": round(float(hit.get("_score", 0.0)), 4),
         })
- 
+        seen_security_names.add(sec_name)
+
+    # ---- Alias search: Phase 2 addition ----
+    if family_query:
+        alias_sec_body = {
+            "size": 20,
+            "query": {
+                "bool": {
+                    "filter": [{"term": {"is_alias": True}}],
+                    "should": [
+                        {"match_phrase": {"master_normalized_security_name": {"query": security_query, "boost": 30}}},
+                        {"multi_match": {
+                            "query": security_query,
+                            "fields": ["master_normalized_security_name", "master_normalized_soi_name"],
+                            "type": "cross_fields",
+                            "operator": "or",
+                            "minimum_should_match": "50%",
+                            "boost": 25,
+                        }},
+                        {"match": {"master_normalized_security_name": {"query": security_query, "operator": "or", "minimum_should_match": "70%", "boost": 10}}},
+                    ],
+                    "minimum_should_match": 1,
+                }
+            },
+            "_source": [
+                "master_security_details",
+                "master_family_name",
+                "master_normalized_family_name",
+                "master_security_name",
+                "master_normalized_security_name",
+                "master_soi_name",
+                "master_normalized_soi_name",
+                "master_security_type",
+            ],
+            "collapse": {"field": "master_normalized_security_name.keyword"},
+        }
+
+        alias_sec_hits = es.search(
+            index=index_name, body=alias_sec_body
+        ).get("hits", {}).get("hits", [])
+
+        for hit in alias_sec_hits:
+            src = hit.get("_source", {})
+            msd = src.get("master_security_details") or {}
+
+            sec_name = src.get("master_security_name", "") or msd.get("security_name", "")
+            if not sec_name.strip() or sec_name in seen_security_names:
+                continue
+
+            securities.append({
+                "security_name": sec_name,
+                "security_type": src.get("master_security_type", "") or msd.get("security_type", ""),
+                "normalized_soi_name": src.get("master_normalized_soi_name", "") or msd.get("normalized_soi_name", ""),
+                "normalized_security_name": src.get("master_normalized_security_name", "") or msd.get("normalized_security_name", ""),
+                "normalized_family_name": src.get("master_normalized_family_name", "") or msd.get("normalized_family_name", ""),
+                "score": round(float(hit.get("_score", 0.0)), 4),
+            })
+            seen_security_names.add(sec_name)
+
+    securities.sort(key=lambda x: x["score"], reverse=True)
+
     return securities
  
 @app.route(
@@ -585,9 +642,6 @@ def map_security_api(
             f"Input received: {family_string} | security_input: {security_string}"
         )
  
-        # -----------------------------
-        # PostgreSQL Validation
-        # -----------------------------
        
  
         # -----------------------------
@@ -695,6 +749,7 @@ def map_security_api(
                     "normalized_company_query": family_query,
                     "normalized_security_query": security_query,
                     "matched": True,
+                    "match_type": match_type,
                     "mapped_security": master_details.get("security_name", "") if is_alias else None,
                     "mapped_family": master_details.get("family_name", "") if is_alias else None,
                     "filetype": bypass_source.get("filetype", "") if is_alias else None,
@@ -727,29 +782,17 @@ def map_security_api(
         # Retrieve Families
         # -----------------------------
  
-        family_result = search_family_matches(
-            family_query
-)
- 
+        family_result = search_family_matches(family_query)
         family_matches = family_result[  "matches" ]
-           
-       
-        primary_token = family_result[
- 
-             "primary_token"
-        ]
- 
-        cleaned_family_query = family_result[
-             "cleaned_family_query"
-        ]
+        primary_token = family_result["primary_token"]
+        cleaned_family_query = family_result["cleaned_family_query"]
  
         # family_matches = boost_by_type(
         #     family_matches,
         #     family_query
         # )
  
-        best_family = (
-            family_matches[0]
+        best_family = (family_matches[0]
             if family_matches
             else None
         )
@@ -765,18 +808,14 @@ def map_security_api(
             # Search securities across all candidate families
             reranked_securities = search_securities_es(
                 security_query,
-                family_matches
+                family_matches,
+                family_query=family_query
             )
  
             if reranked_securities and reranked_securities[0]["score"] > 0.0:
                 matched = True
                 best_sec = reranked_securities[0]
-                
-                # # Align the best_family to the actual family of the top security
-                # matching_family = next(
-                #     (f for f in family_matches if f["normalized_family_name"] == best_sec["normalized_family_name"]),
-                #     best_family
-                # )
+
  
                 
                 best_family["top_security"] = best_sec["security_name"]
@@ -793,24 +832,17 @@ def map_security_api(
         # -----------------------------
         result = {
             "company_input": family_string,
-
             "security_input": security_string,
-
             "normalized_company_query": family_query,
-
             "normalized_security_query": security_query,
-
             "matched": matched,
-
             "match_type": "direct" if matched else None,
-
             "mapped_security": None,
             "mapped_family": None,
             "filetype": None,
             "mapped_at": None,
-
+            "best_family_match": best_family,
             "mastercomp_document": best_family,
-
             "top_matching_families": [
                 {
                     "family_name": f["family_name"],

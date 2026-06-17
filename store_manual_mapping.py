@@ -45,13 +45,8 @@ def store_manual_mapping(source_family, source_security, target_security_name, f
     master_doc = master_hits[0]["_source"] if master_hits else None
     
     if not master_doc:
-        print(f"   [WARNING] Target master security '{target_security_name}' not found in index '{ES_INDEX}'. Creating a basic placeholder.")
-        master_doc = {
-            "family_name": target_security_name,
-            "security_name": target_security_name,
-            "normalized_family_name": norm_fam,
-            "normalized_security_name": norm_sec,
-        }
+        print(f"   [WARNING] Target master security '{target_security_name}' not found in index '{ES_INDEX}'. Storing with blank master fields.")
+        master_doc = {}
     
     # 4. Construct the mapping document to match the updated schema
     mapping_doc = {
@@ -63,7 +58,15 @@ def store_manual_mapping(source_family, source_security, target_security_name, f
         "filetype": filetype,
         "loan_type": loan_type or (master_doc.get("security_type", "") if master_doc else ""),
         "master_security_details": master_doc,
-        "metadata": {},  # Storing an empty metadata object as expected by the new schema
+        # flat searchable mirror of master_security_details
+        "master_family_name":              master_doc.get("family_name", ""),
+        "master_normalized_family_name":   master_doc.get("normalized_family_name", ""),
+        "master_security_name":            master_doc.get("security_name", ""),
+        "master_normalized_security_name": master_doc.get("normalized_security_name", ""),
+        "master_soi_name":                 master_doc.get("soi_name", ""),
+        "master_normalized_soi_name":      master_doc.get("normalized_soi_name", ""),
+        "master_security_type":            master_doc.get("security_type", ""),
+        "metadata": {},
         "ingested_at": datetime.now(timezone.utc).isoformat()
     }
     

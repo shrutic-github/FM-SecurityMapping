@@ -202,10 +202,15 @@ def run_evaluation():
         # FAMILY EVALUATION
         # =====================================================
  
-        best_family = api_result.get(
-            "best_family_match"
-        ) or {}
- 
+        match_type = api_result.get("match_type")
+
+        if match_type in ("historical", "indirect"):
+            # Result came from a previously mapped (alias) document
+            best_family = api_result.get("mastercomp_document") or {}
+        else:
+            # Result came from master data retrieval (Phase 1 + Phase 2)
+            best_family = api_result.get("best_family_match") or {}
+
         predicted_family = (
             best_family.get("family_name")
             or best_family.get("normalized_family_name")
@@ -301,7 +306,7 @@ def run_evaluation():
             "source_file_type": source_file_type,
             "text_case_category": text_case_category,
             "security_input":api_result.get("security_input"),
-            "family_query_to_es": api_result.get("normalized_input"),
+            "family_query_to_es": api_result.get("normalized_company_query"),
  
             "expected_family": expected_family,
             "predicted_family": predicted_family,

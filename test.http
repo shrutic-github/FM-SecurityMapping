@@ -796,7 +796,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Rancho Health MSO, Inc.",
+  "input": "RFMG Parent, LP - Common Equity",
   "security_input": "RFMG Parent, LP - Common Equity"
 }
 
@@ -805,7 +805,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Project Granite Buyer, Inc.",
+  "input": "project Granite Holdings",
   "security_input": "Project Granite Holdings, LLC - Common Equity"
 }
 

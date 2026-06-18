@@ -16,7 +16,7 @@ ES_CLIENT = Elasticsearch(
 POSTGRES_CONN = config_data.get("POSTGRES_CONN")
 ES_INDEX = config_data.get("ES_INDEX", "security_master_v4")
 
-def store_manual_mapping(source_family, source_security, target_security_name, filetype="us bank cashfile", loan_type=""):
+def store_manual_mapping(source_family, source_security, target_security_name, filetype="us bank cashfile", loan_type="", metadata=None):
     print(f"\nProcessing manual mapping for: '{source_security}' -> '{target_security_name}'")
     
     # 2. Normalize raw inputs
@@ -66,7 +66,7 @@ def store_manual_mapping(source_family, source_security, target_security_name, f
         "master_soi_name":                 master_doc.get("soi_name", ""),
         "master_normalized_soi_name":      master_doc.get("normalized_soi_name", ""),
         "master_security_type":            master_doc.get("security_type", ""),
-        "metadata": {},
+        "metadata": metadata or {},
         "ingested_at": datetime.now(timezone.utc).isoformat()
     }
     
@@ -93,9 +93,14 @@ if __name__ == "__main__":
     # Example usage:
     # Change these values to insert your manual overrides
     store_manual_mapping(
-        source_family="Sath Industries LLC",
-        source_security="",
-        target_security_name="360DG (DDTL A)",
-        filetype="watc_holdings",
-        loan_type="Delayed Draw Term Loan (360DG)"
+        source_family="Arcline FM Holdings LLC",
+        source_security="Arcline FM Holdings T/L (7/24) (Fairbanks Morse) - Target",
+        target_security_name="Fairbanks Morse Defense (Term Loan)",
+        filetype="us bank cashfile",
+        loan_type="Term Loan",
+        metadata={
+            "loanxid": "",
+            "Identifier": "",
+            "source_file_id": "",
+        }
     )

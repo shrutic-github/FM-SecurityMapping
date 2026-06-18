@@ -751,7 +751,6 @@ Content-Type: application/json
 
 {
   "input": "TCG 3.0 Jogger Co-Invest, LP - Common Equity"
-  "input": "Aechelon Technology, Inc.",
   "security_input": "Aechelon InvestCo, LP - Common Equity"
 }
 
@@ -816,9 +815,7 @@ Content-Type: application/json
 
 {
   "input": "Tyto Athene, LLC",
-  "security_input": "NXOF Holdings, Inc. - Common Equity"
-  "input": "Tyto Athene, LLC",
-  "security_input": "NXOF Holdings, Inc. - Common Equity"
+  "security_input": "NXOF Holdings, Inc. - Common Equity
 }
 
 ### 91
@@ -827,9 +824,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Tyto Athene, LLC",
-  "security_input": "NXOF Holdings, Inc. - Preferred Equity"
-  "input": "Tyto Athene, LLC",
+  "input": "Tyto Athene, LLC"
   "security_input": "NXOF Holdings, Inc. - Preferred Equity"
 }
 
@@ -839,9 +834,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "The Vertex Companies, LLC",
-  "security_input": "TWD Parent Holdings, LLC - Common Equity"
-  "input": "The Vertex Companies, LLC",
+  "input": "The Vertex Companies, LLC"
   "security_input": "TWD Parent Holdings, LLC - Common Equity"
 }
 

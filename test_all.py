@@ -206,7 +206,7 @@ def run_evaluation():
 
         if match_type in ("historical", "indirect"):
             # Result came from a previously mapped (alias) document
-            best_family = api_result.get("mastercomp_document") or {}
+            best_family = api_result.get("master_document") or {}
         else:
             # Result came from master data retrieval (Phase 1 + Phase 2)
             best_family = api_result.get("best_family_match") or {}

@@ -305,21 +305,54 @@ def search_family_matches(family_query: str) -> list[dict]:
                 "minimum_should_match": 1,
             }
         },
- 
+
         # IMPORTANT
         # one representative hit per family
         "collapse": {
             "field": "family_name.keyword"
         }
     }
- 
-    response = es.search(
+
+    alias_family_body = {
+        "size": top_k,
+        "query": {
+            "bool": {
+                "filter": [{"term": {"is_alias": True}}],
+                "should": [
+
+                    {"multi_match": {
+                             "query": cleaned_family_query,
+                           "fields": ["normalized_company_name^50", "normalized_security_name^30"],
+                             "type": "phrase",
+                             "boost": 30,
+                        }},
+
+                     {"match_phrase": {"master_normalized_family_name": {"query": cleaned_family_query, "boost": 30}}},
+                     {"match": {"master_normalized_family_name": {"query": cleaned_family_query, "operator": "or", "minimum_should_match": "70%", "boost": 15}}},
+                     {"match_phrase": {"master_normalized_soi_name": {"query": cleaned_family_query, "boost": 25}}},
+                     {"match": {"master_normalized_soi_name": {"query": cleaned_family_query, "operator": "or", "minimum_should_match": "70%", "boost": 20}}},
+                     {"match_phrase": {"master_normalized_security_name": {"query": cleaned_family_query, "boost": 10}}},
+                     {"match": {"master_normalized_security_name": {"query": cleaned_family_query, "operator": "or", "minimum_should_match": "70%", "boost": 8}}},
+                ],
+                "minimum_should_match": 1,
+            }
+        },
+        "collapse": {"field": "master_normalized_family_name.keyword"},
+    }
+
+    # Both queries are independent (alias vs non-alias docs) - batch them
+    # into one msearch call instead of two sequential round trips.
+    msearch_resp = es.msearch(
         index=index_name,
-        body=body
+        searches=[
+            {}, body,
+            {}, alias_family_body,
+        ],
     )
- 
-    hits = response.get("hits", {}).get("hits", [])
- 
+    responses = msearch_resp.get("responses", [])
+
+    hits = responses[0].get("hits", {}).get("hits", []) if responses else []
+
     matches = []
     for hit in hits:
         source = hit.get("_source", {})
@@ -350,38 +383,26 @@ def search_family_matches(family_query: str) -> list[dict]:
     )
 
     # ---- Alias search: Phase 1 addition ----
-    seen_family_names = {m["normalized_family_name"] for m in matches}
-
-    alias_family_body = {
-        "size": top_k,
-        "query": {
-            "bool": {
-                "filter": [{"term": {"is_alias": True}}],
-                "should": [
-                    {"match_phrase": {"master_normalized_family_name": {"query": cleaned_family_query, "boost": 30}}},
-                    {"match": {"master_normalized_family_name": {"query": cleaned_family_query, "operator": "or", "minimum_should_match": "70%", "boost": 15}}},
-                    {"match": {"master_normalized_soi_name": {"query": cleaned_family_query, "operator": "or", "minimum_should_match": "70%", "boost": 20}}},
-                ],
-                "minimum_should_match": 1,
-            }
-        },
-        "collapse": {"field": "master_normalized_family_name.keyword"},
+    family_index_by_name = {
+        m["normalized_family_name"]: i for i, m in enumerate(matches)
     }
 
-    alias_family_hits = es.search(
-        index=index_name, body=alias_family_body
-    ).get("hits", {}).get("hits", [])
+    alias_family_hits = (
+        responses[1].get("hits", {}).get("hits", [])
+        if len(responses) > 1
+        else []
+    )
 
     for hit in alias_family_hits:
         source = hit.get("_source", {})
         msd = source.get("master_security_details") or {}
 
         norm_fam = source.get("master_normalized_family_name", "") or msd.get("normalized_family_name", "")
-        if not norm_fam or norm_fam in seen_family_names:
+        if not norm_fam:
             continue
 
         raw_es_score = float(hit.get("_score", 0.0))
-        matches.append({
+        candidate = {
             "family_name": source.get("master_family_name", "") or msd.get("family_name", ""),
             "normalized_family_name": norm_fam,
             "top_security": source.get("master_security_name", "") or msd.get("security_name", ""),
@@ -390,8 +411,16 @@ def search_family_matches(family_query: str) -> list[dict]:
             "normalized_security_name": source.get("master_normalized_security_name", "") or msd.get("normalized_security_name", ""),
             "score": round(_es_scaled(raw_es_score), 4),
             "raw_es_score": round(raw_es_score, 4),
-        })
-        seen_family_names.add(norm_fam)
+        }
+
+        existing_idx = family_index_by_name.get(norm_fam)
+        if existing_idx is None:
+            matches.append(candidate)
+            family_index_by_name[norm_fam] = len(matches) - 1
+        elif candidate["score"] > matches[existing_idx]["score"]:
+            # Alias mapping is a more authoritative signal than a weak
+            # incidental token-overlap match, so let it win on the same family.
+            matches[existing_idx] = candidate
 
     matches.sort(key=lambda x: x["score"], reverse=True)
 
@@ -436,7 +465,16 @@ def search_securities_es(
                 }
             }
         },
-        
+        {
+            "match": {
+                "normalized_security_name": {
+                    "query": security_query,
+                    "operator": "or",
+                    "minimum_should_match": "50%",
+                    "boost": 10,
+                }
+            }
+        },
         # ---- Combination of match(or) on security name and match(or) on soi name ----
         {
             "multi_match": {
@@ -446,17 +484,6 @@ def search_securities_es(
                 "operator": "or",
                 "minimum_should_match": "50%",
                 "boost": 25,
-            }
-        },
-
-        {
-            "match": {
-                "normalized_security_name": {
-                    "query": security_query,
-                    "operator": "or",
-                    "minimum_should_match": "50%",
-                    "boost": 10,
-                }
             }
         },
 
@@ -525,10 +552,70 @@ def search_securities_es(
         },
     }
  
-    hits = es.search(
+    # ---- Alias search: Phase 2 addition ----
+    alias_sec_body = None
+    if family_query:
+        alias_sec_body = {
+            "size": 20,
+            "query": {
+                "bool": {
+                    "filter": [{"term": {"is_alias": True}}],
+                    "should": [
+                        {"multi_match": {
+                            "query": security_query,
+                            "fields": ["normalized_company_name^50", "normalized_security_name^30"],
+                            "type": "phrase",
+                            "boost": 30,
+                        }},
+                        {"match_phrase": {"master_normalized_security_name": {"query": security_query, "boost": 30}}},
+                        {"match": {"master_normalized_security_name": {"query": security_query, "operator": "or", "minimum_should_match": "70%", "boost": 10}}},
+                        {"multi_match": {
+                            "query": security_query,
+                            "fields": ["master_normalized_security_name", "master_normalized_soi_name"],
+                            "type": "cross_fields",
+                            "operator": "or",
+                            "minimum_should_match": "50%",
+                            "boost": 25,
+                        }},
+                        {"multi_match": {
+                            "query": security_query,
+                            "fields": ["master_normalized_security_name", "master_normalized_security_type"],
+                            "type": "cross_fields",
+                            "operator": "or",
+                            "minimum_should_match": "50%",
+                            "boost": 20,
+                        }},
+
+                        
+                    ],
+                    "minimum_should_match": 1,
+                }
+            },
+            "_source": [
+                "master_security_details",
+                "master_family_name",
+                "master_normalized_family_name",
+                "master_security_name",
+                "master_normalized_security_name",
+                "master_soi_name",
+                "master_normalized_soi_name",
+                "master_security_type",
+            ],
+            "collapse": {"field": "master_normalized_security_name.keyword"},
+        }
+
+    # Both queries are independent (alias vs non-alias docs) - batch them
+    # into one msearch call instead of two sequential round trips.
+    searches = [{}, body]
+    if alias_sec_body is not None:
+        searches.extend([{}, alias_sec_body])
+
+    responses = es.msearch(
         index=index_name,
-        body=body
-    ).get("hits", {}).get("hits", [])
+        searches=searches,
+    ).get("responses", [])
+
+    hits = responses[0].get("hits", {}).get("hits", []) if responses else []
 
     securities = []
     seen_security_names = set()
@@ -550,44 +637,12 @@ def search_securities_es(
         })
         seen_security_names.add(sec_name)
 
-    # ---- Alias search: Phase 2 addition ----
-    if family_query:
-        alias_sec_body = {
-            "size": 20,
-            "query": {
-                "bool": {
-                    "filter": [{"term": {"is_alias": True}}],
-                    "should": [
-                        {"match_phrase": {"master_normalized_security_name": {"query": security_query, "boost": 30}}},
-                        {"multi_match": {
-                            "query": security_query,
-                            "fields": ["master_normalized_security_name", "master_normalized_soi_name"],
-                            "type": "cross_fields",
-                            "operator": "or",
-                            "minimum_should_match": "50%",
-                            "boost": 25,
-                        }},
-                        {"match": {"master_normalized_security_name": {"query": security_query, "operator": "or", "minimum_should_match": "70%", "boost": 10}}},
-                    ],
-                    "minimum_should_match": 1,
-                }
-            },
-            "_source": [
-                "master_security_details",
-                "master_family_name",
-                "master_normalized_family_name",
-                "master_security_name",
-                "master_normalized_security_name",
-                "master_soi_name",
-                "master_normalized_soi_name",
-                "master_security_type",
-            ],
-            "collapse": {"field": "master_normalized_security_name.keyword"},
-        }
-
-        alias_sec_hits = es.search(
-            index=index_name, body=alias_sec_body
-        ).get("hits", {}).get("hits", [])
+    if alias_sec_body is not None:
+        alias_sec_hits = (
+            responses[1].get("hits", {}).get("hits", [])
+            if len(responses) > 1
+            else []
+        )
 
         for hit in alias_sec_hits:
             src = hit.get("_source", {})
@@ -754,7 +809,7 @@ def map_security_api(
                     "mapped_family": master_details.get("family_name", "") if is_alias else None,
                     "filetype": bypass_source.get("filetype", "") if is_alias else None,
                     "mapped_at": bypass_source.get("ingested_at", "") if is_alias else None,
-                    "mastercomp_document": best_family,
+                    "master_document": best_family,
                     "top_matching_families": [
                         { "family_name": master_details.get("family_name", "") }
                     ],
@@ -796,7 +851,12 @@ def map_security_api(
             if family_matches
             else None
         )
- 
+
+        # Snapshot the master record's own fields (soi_name, security_type,
+        # its own security_name) before the security search below overwrites
+        # best_family's top_security/security_type with the predicted match.
+        master_document_snapshot = dict(best_family) if best_family else None
+
         matched = False
         reranked_securities = []
  
@@ -804,11 +864,22 @@ def map_security_api(
         # ES Security Search
         # -----------------------------
         if best_family:
- 
-            # Search securities across all candidate families
+
+            # A score of 1.0 means the family was resolved via an
+            # alias-confirmed match, not a fuzzy token-overlap guess -
+            # trust it and don't let a weaker cross-family security
+            # match override it.
+            is_high_confidence_family = best_family.get("score", 0.0) >= 1.0
+
+            candidate_families = (
+                [best_family] if is_high_confidence_family else family_matches
+            )
+
+            # Search securities within the resolved family, or across all
+            # candidate families when family confidence is still low.
             reranked_securities = search_securities_es(
                 security_query,
-                family_matches,
+                candidate_families,
                 family_query=family_query
             )
  
@@ -841,8 +912,30 @@ def map_security_api(
             "mapped_family": None,
             "filetype": None,
             "mapped_at": None,
-            "best_family_match": best_family,
-            "mastercomp_document": best_family,
+            "best_family_match": (
+                {
+                    "family_name": best_family.get("family_name"),
+                    "normalized_family_name": best_family.get("normalized_family_name"),
+                    "top_security": best_family.get("top_security"),
+                    "normalized_security_name": best_family.get("normalized_security_name"),
+                    "score": best_family.get("score"),
+                    "raw_es_score": best_family.get("raw_es_score"),
+                    "security_score": best_family.get("security_score"),
+                }
+                if best_family
+                else None
+            ),
+            "master_document": (
+                {
+                    "family_name": master_document_snapshot.get("family_name"),
+                    "normalized_family_name": master_document_snapshot.get("normalized_family_name"),
+                    "soi_name": master_document_snapshot.get("soi_name"),
+                    "security_type": master_document_snapshot.get("security_type"),
+                    "security_name": master_document_snapshot.get("top_security"),
+                }
+                if master_document_snapshot
+                else None
+            ),
             "top_matching_families": [
                 {
                     "family_name": f["family_name"],

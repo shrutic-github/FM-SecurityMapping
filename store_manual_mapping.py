@@ -93,11 +93,11 @@ if __name__ == "__main__":
     # Example usage:
     # Change these values to insert your manual overrides
     store_manual_mapping(
-        source_family="Arcline FM Holdings LLC",
-        source_security="Arcline FM Holdings T/L (7/24) (Fairbanks Morse) - Target",
-        target_security_name="Fairbanks Morse Defense (Term Loan)",
-        filetype="us bank cashfile",
-        loan_type="Term Loan",
+        source_family="Knexus Holdco, LLC - Preferred Equity",
+        source_security="Knexus Holdco, LLC - Preferred Equity",
+        target_security_name="C5MI (Preferred Equity)",
+        filetype="daily_long_short",
+        loan_type="",
         metadata={
             "loanxid": "",
             "Identifier": "",

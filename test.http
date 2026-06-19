@@ -239,7 +239,7 @@ Content-Type: application/json
 
 {
   "input": "Arcline FM Holdings LLC",
-  "security_input": "Arcline FM Holdings T/L (7/24) (Fairbanks Morse) - Target"
+  "security_input": "Arcline FM Holdings T/L (7/24) (Fairbanks Morse) - Target "
 }
 
 ### 28
@@ -275,7 +275,7 @@ Content-Type: application/json
 
 {
   "input": "The Track Branson Opco, LLC",
-  "security_input": "The Track Branson Opco DDTL"
+  "security_input": "The Track Branson Opco ddTL"
 }
 
 ### 32
@@ -284,7 +284,7 @@ Content-Type: application/json
 
 {
   "input": "Sath Industries LLC",
-  "security_input": "Delayed Draw Term Loan (360DG)"
+  "security_input": "Sath Industries LLC Delayed Draw Term Loan (360DG)"
 }
 
 ### 33
@@ -356,7 +356,7 @@ Content-Type: application/json
 
 {
   "input": "Radius Aerospace Inc",
-  "security_input": "UK Term Loan"
+  "security_input": "Radius Aerospace Inc UK Term Loan"
 }
 
 ### 41
@@ -374,7 +374,7 @@ Content-Type: application/json
 
 {
   "input": "TMII Enterprises LLC",
-  "security_input": "TMII Enterprises LLC DDTL"
+  "security_input": "TMII Enterprises LLC DDTL 1st amendment"
 }
 
 ### 43
@@ -768,7 +768,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "C5MI Acquisition, LLC",
+  "input": "",
   "security_input": "Knexus Holdco, LLC - Preferred Equity"
 }
 

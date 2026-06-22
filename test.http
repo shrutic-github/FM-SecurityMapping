@@ -269,13 +269,14 @@ Content-Type: application/json
   "security_input": "PlayPower T/L (08/24)"
 }
 
+#
 ### 31
 POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
   "input": "The Track Branson Opco, LLC",
-  "security_input": "The Track Branson Opco ddTL"
+  "security_input": "The Track Branson Opco DDTL"
 }
 
 ### 32
@@ -284,9 +285,16 @@ Content-Type: application/json
 
 {
   "input": "Sath Industries LLC",
-  "security_input": "Sath Industries LLC Delayed Draw Term Loan (360DG)"
+  "security_input": "Sath Industries LLC Delayed Draw Term Loan (360DG) 2206"
 }
+###
+POST http://localhost:7071/api/map-security
+Content-Type: application/json
 
+{
+  "input": "ABC Industries LLC",
+  "security_input": "ABC Industries LLC Delayed Draw Term Loan (360DG)"
+}
 ### 33
 POST http://localhost:7071/api/map-security
 Content-Type: application/json
@@ -768,8 +776,8 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "",
-  "security_input": "Knexus Holdco, LLC - Preferred Equity"
+  "input": "Knexus Holdco, LLC",
+  "security_input": "Knexus Holdco, LLC - preferred Equity"
 }
 
 ### 86

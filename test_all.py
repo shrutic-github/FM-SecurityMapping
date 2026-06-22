@@ -201,147 +201,153 @@ def run_evaluation():
         # =====================================================
         # FAMILY EVALUATION
         # =====================================================
- 
-        match_type = api_result.get("match_type")
 
+        match_info = api_result.get("match") or {}
+        match_type = match_info.get("match_type")
+
+        # Historical/indirect (bypass) responses nest the master record
+        # under mapped.master_security_details and omit candidates
+        # entirely (no broader search was run). direct/unmatched
+        # responses carry master_data + candidates instead.
         if match_type in ("historical", "indirect"):
-            # Result came from a previously mapped (alias) document
-            best_family = api_result.get("master_document") or {}
+            master_data = (api_result.get("mapped") or {}).get(
+                "master_security_details"
+            ) or {}
+            top_families = (
+                [{"family_name": master_data.get("family_name")}]
+                if master_data.get("family_name")
+                else []
+            )
+            ranked_securities = (
+                [{"security_name": master_data.get("security_name")}]
+                if master_data.get("security_name")
+                else []
+            )
         else:
-            # Result came from master data retrieval (Phase 1 + Phase 2)
-            best_family = api_result.get("best_family_match") or {}
+            master_data = api_result.get("master_data") or {}
+            top_families = api_result.get("candidates", {}).get(
+                "top_families",
+                []
+            )
+            ranked_securities = api_result.get("candidates", {}).get(
+                "ranked_securities",
+                []
+            )
 
         predicted_family = (
-            best_family.get("family_name")
-            or best_family.get("normalized_family_name")
+            master_data.get("family_name")
+            or master_data.get("normalized_family_name")
         )
- 
+
         family_correct = (
             predicted_family == expected_family
         )
- 
+
         if family_correct:
             family_top1_correct += 1
- 
-        top_families = api_result.get(
-            "top_matching_families",
-            []
-        )
- 
+
         top_family_names = [
             x.get("family_name") or x.get("normalized_family_name")
             for x in top_families
         ]
- 
+
         family_topk = (
             expected_family in top_family_names
         )
- 
+
         if family_topk:
             family_topk_correct += 1
- 
+
         family_rank = None
- 
+
         if expected_family in top_family_names:
- 
+
             family_rank = (
                 top_family_names.index(expected_family) + 1
             )
- 
+
         # =====================================================
         # SECURITY EVALUATION
         # =====================================================
- 
-        ranked_securities = api_result.get(
-            "ranked_family_securities",
-            []
-        )
- 
-        predicted_security = (
-         best_family.get("top_security")
-         if best_family
-        else None
-    )
- 
- 
+
+        predicted_security = master_data.get("security_name")
+
         security_correct = (
             predicted_security == expected_security
         )
- 
+
         if security_correct:
             security_top1_correct += 1
- 
+
         ranked_security_names = [
             s.get("security_name")
             for s in ranked_securities
         ]
- 
+
         security_topk = (
             expected_security in ranked_security_names[:TOP_K]
         )
- 
+
         if security_topk:
             security_topk_correct += 1
- 
+
         security_rank = None
- 
+
         if expected_security in ranked_security_names:
- 
+
             security_rank = (
                 ranked_security_names.index(
                     expected_security
                 ) + 1
             )
- 
+
         # =====================================================
         # STORE RESULT
         # =====================================================
- 
+
         results.append({
- 
+
             # -----------------------------
             # INPUT
             # -----------------------------
             "input": input_text,
             "source_file_type": source_file_type,
             "text_case_category": text_case_category,
-            "security_input":api_result.get("security_input"),
-            "family_query_to_es": api_result.get("normalized_company_query"),
- 
+            "security_input": api_result.get("input", {}).get("security_input"),
+            "family_query_to_es": api_result.get("normalized", {}).get("company_query"),
+
             "expected_family": expected_family,
             "predicted_family": predicted_family,
             "family_correct": family_correct,
             "family_topk_correct": family_topk,
             "family_rank": family_rank,
- 
+
             "expected_security": expected_security,
             "predicted_security": predicted_security,
             "security_correct": security_correct,
             "security_topk_correct": security_topk,
             "security_rank": security_rank,
- 
-           
- 
+
+
+
             # -----------------------------
             # SCORES
             # -----------------------------
-            "family_score": best_family.get("score"),
-            "security_score": best_family.get("security_score"),
- 
+            "family_score": match_info.get("family_confidence"),
+            "security_score": match_info.get("security_confidence"),
+
             # -----------------------------
             # DEBUG
             # -----------------------------
             "top_family_matches": " | ".join(
                 [str(x) for x in top_family_names]
             ),
- 
+
             "top_security_matches": " | ".join(
                 [str(x) for x in ranked_security_names[:TOP_K]]
             ),
- 
-            "matched_flag": api_result.get(
-                "matched"
-            )
+
+            "matched_flag": match_info.get("matched")
         })
  
         time.sleep(0.05)

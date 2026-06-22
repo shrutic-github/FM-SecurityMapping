@@ -219,7 +219,7 @@ def search_family_matches(family_query: str) -> list[dict]:
  
     index_name = os.environ.get(
         "ES_INDEX",
-        "security_master_v"
+        "security_master_v4"
     )
  
     top_k = int(os.environ.get("MATCH_TOP_K", "5"))
@@ -559,16 +559,22 @@ def search_securities_es(
             "size": 20,
             "query": {
                 "bool": {
-                    "filter": [{"term": {"is_alias": True}}],
+                    "filter": [
+                        {"term": {"is_alias": True}},
+                        {"terms": {"master_normalized_family_name.keyword": normalized_family_names}},
+                    ],
                     "should": [
-                        {"multi_match": {
-                            "query": security_query,
-                            "fields": ["normalized_company_name^50", "normalized_security_name^30"],
-                            "type": "phrase",
-                            "boost": 30,
-                        }},
+                        # {"multi_match": {
+                        #     "query": security_query,
+                        #     "fields": ["normalized_company_name^30", "normalized_security_name^50"],
+                        #     "type": "phrase",
+                        #     "boost": 30,
+                        # }},
+                        {"match_phrase": {"normalized_security_name": {"query": security_query, "boost": 30}}},
                         {"match_phrase": {"master_normalized_security_name": {"query": security_query, "boost": 30}}},
                         {"match": {"master_normalized_security_name": {"query": security_query, "operator": "or", "minimum_should_match": "70%", "boost": 10}}},
+                
+                      
                         {"multi_match": {
                             "query": security_query,
                             "fields": ["master_normalized_security_name", "master_normalized_soi_name"],
@@ -582,7 +588,7 @@ def search_securities_es(
                             "fields": ["master_normalized_security_name", "master_normalized_security_type"],
                             "type": "cross_fields",
                             "operator": "or",
-                            "minimum_should_match": "50%",
+                            "minimum_should_match": "70%",
                             "boost": 20,
                         }},
 
@@ -666,65 +672,38 @@ def search_securities_es(
 
     return securities
  
-@app.route(
-    route="map-security",
-    methods=["POST"]
-)
-def map_security_api(
-    req: func.HttpRequest
-) -> func.HttpResponse:
- 
+def _resolve_security_mapping(
+    family_string: str,
+    security_string: str,
+    conn_string: str
+) -> dict:
+
     logging.info(
-        "Received mapping request"
+        f"Input received: {family_string} | security_input: {security_string}"
     )
- 
+
+    # -----------------------------
+    # Normalize
+    # -----------------------------
+
+    normalized_result = normalize_input(
+        family_string,
+        conn_string
+    )
+
+    family_query = normalized_result[
+        "normalized_query"
+    ]
+
+    security_query = normalize_input(
+        security_string,
+        conn_string
+    )["normalized_query"]
+
+    # -----------------------------
+    # Check for Mapped Security Bypass (Indirect Match)
+    # -----------------------------
     try:
-        body = req.get_json()
-        family_string = body.get("input")
-        security_string = body.get("security_input") or family_string
- 
-        if not family_string:
-            return func.HttpResponse(
-                json.dumps({
-                    "error": "Input string is required"
-                }),
- 
-                status_code=400,
-                mimetype="application/json"
-            )
- 
-        logging.info(
-            f"Input received: {family_string} | security_input: {security_string}"
-        )
- 
-       
- 
-        # -----------------------------
-        # Normalize
-        # -----------------------------
-        
-        conn_string = os.environ.get("POSTGRES_CONN")
-        if not conn_string:
-            raise Exception("POSTGRES_CONN not found")
- 
-        normalized_result = normalize_input(
-            family_string,
-            conn_string
-        )
- 
-        family_query = normalized_result[
-            "normalized_query"
-        ]
- 
-        security_query = normalize_input(
-            security_string,
-            conn_string
-        )["normalized_query"]
- 
-        # -----------------------------
-        # Check for Mapped Security Bypass (Indirect Match)
-        # -----------------------------
-        try:
             es_client = get_es_client()
             index_name = os.environ.get("ES_INDEX", "security_master_v4")
             
@@ -787,186 +766,251 @@ def map_security_api(
                     metadata = {}
                 
                 sec_type = master_details.get("security_type", "") or metadata.get("loan_type", "")
-                
-                best_family = dict(master_details)
-                best_family.pop("normalized_name", None)
-                best_family["security_type"] = sec_type
-                best_family["score"] = 1.0
-                best_family["raw_es_score"] = 1.0
-                best_family["security_score"] = 1.0
-                best_family["match_type"] = match_type
-                if "top_security" not in best_family and "security_name" in best_family:
-                    best_family["top_security"] = best_family["security_name"]
-                
+
                 result = {
-                    "company_input": family_string,
-                    "security_input": security_string,
-                    "normalized_company_query": family_query,
-                    "normalized_security_query": security_query,
-                    "matched": True,
-                    "match_type": match_type,
-                    "mapped_security": master_details.get("security_name", "") if is_alias else None,
-                    "mapped_family": master_details.get("family_name", "") if is_alias else None,
-                    "filetype": bypass_source.get("filetype", "") if is_alias else None,
-                    "mapped_at": bypass_source.get("ingested_at", "") if is_alias else None,
-                    "master_document": best_family,
-                    "top_matching_families": [
-                        { "family_name": master_details.get("family_name", "") }
-                    ],
-                    "ranked_family_securities": [
-                        {
-                            "security_name": master_details.get("security_name", ""),
-                            "security_type": sec_type,
-                            "normalized_soi_name": master_details.get("normalized_soi_name", ""),
-                            "normalized_security_name": master_details.get("normalized_security_name", ""),
+                    "input": {
+                        "company_input": family_string,
+                        "security_input": security_string,
+                        "company_query": family_query,
+                        "security_query": security_query, 
+                    },
+                    "mapped": {
+                        "mapped_family": master_details.get("family_name", "") if is_alias else None,
+                        "mapped_security": master_details.get("security_name", "") if is_alias else None,
+                        "filetype": bypass_source.get("filetype", "") if is_alias else None,
+                        "mapped_at": bypass_source.get("ingested_at", "") if is_alias else None,
+                        "master_security_details": {
+                            "family_name": master_details.get("family_name", ""),
                             "normalized_family_name": master_details.get("normalized_family_name", ""),
-                            "score": 1.0
-                        }
-                    ],
+                            "soi_name": master_details.get("soi_name", ""),
+                            "security_name": master_details.get("security_name", ""),
+                            "normalized_security_name": master_details.get("normalized_security_name", ""),
+                            "security_type": sec_type,
+                        },
+                    },
+                    "match": {
+                        "top_security": master_details.get("security_name", ""),
+                        "family_confidence": 1.0,
+                        "security_confidence": 1.0,
+                        "matched": True,
+                        "match_type": match_type,
+                    },
                 }
                 logging.info(f"Historical Match ({match_type}) Found for raw inputs: {family_string} | {security_string}")
-                return func.HttpResponse(
-                    json.dumps(result),
-                    status_code=200,
-                    mimetype="application/json"
-                )
-        except Exception as e:
-            logging.error(f"Bypass lookup failed: {e}")
+                return result
+    except Exception as e:
+        logging.error(f"Bypass lookup failed: {e}")
 
-        # -----------------------------
-        # Retrieve Families
-        # -----------------------------
- 
-        family_result = search_family_matches(family_query)
-        family_matches = family_result[  "matches" ]
-        primary_token = family_result["primary_token"]
-        cleaned_family_query = family_result["cleaned_family_query"]
- 
-        # family_matches = boost_by_type(
-        #     family_matches,
-        #     family_query
-        # )
- 
-        best_family = (family_matches[0]
-            if family_matches
-            else None
+    # -----------------------------
+    # Retrieve Families
+    # -----------------------------
+
+    family_result = search_family_matches(family_query)
+    family_matches = family_result[  "matches" ]
+    primary_token = family_result["primary_token"]
+    cleaned_family_query = family_result["cleaned_family_query"]
+
+    # family_matches = boost_by_type(
+    #     family_matches,
+    #     family_query
+    # )
+
+    best_family = (family_matches[0]
+        if family_matches
+        else None
+    )
+
+    matched = False
+    reranked_securities = []
+
+    # -----------------------------
+    # ES Security Search
+    # -----------------------------
+    if best_family:
+
+        # A score of 1.0 means the family was resolved via an
+        # alias-confirmed match, not a fuzzy token-overlap guess -
+        # trust it and don't let a weaker cross-family security
+        # match override it.
+        is_high_confidence_family = best_family.get("score", 0.0) >= 1.0
+
+        candidate_families = (
+            [best_family] if is_high_confidence_family else family_matches
         )
 
-        # Snapshot the master record's own fields (soi_name, security_type,
-        # its own security_name) before the security search below overwrites
-        # best_family's top_security/security_type with the predicted match.
-        master_document_snapshot = dict(best_family) if best_family else None
+        # Search securities within the resolved family, or across all
+        # candidate families when family confidence is still low.
+        reranked_securities = search_securities_es(
+            security_query,
+            candidate_families,
+            family_query=family_query
+        )
 
-        matched = False
-        reranked_securities = []
- 
-        # -----------------------------
-        # ES Security Search
-        # -----------------------------
-        if best_family:
+        if reranked_securities and reranked_securities[0]["score"] > 0.0:
+            matched = True
+            best_sec = reranked_securities[0]
 
-            # A score of 1.0 means the family was resolved via an
-            # alias-confirmed match, not a fuzzy token-overlap guess -
-            # trust it and don't let a weaker cross-family security
-            # match override it.
-            is_high_confidence_family = best_family.get("score", 0.0) >= 1.0
+            # When family confidence is low, search_securities_es searches
+            # across all candidate families at once, so the winning
+            # security may not belong to best_family. Re-anchor to
+            # whichever family actually owns it, so master_data's
+            # family and security fields never end up from two
+            # different families.
+            if best_sec["normalized_family_name"] != best_family.get("normalized_family_name"):
+                matching_family = next(
+                    (
+                        f for f in family_matches
+                        if f["normalized_family_name"] == best_sec["normalized_family_name"]
+                    ),
+                    None
+                )
+                if matching_family:
+                    best_family = matching_family
 
-            candidate_families = (
-                [best_family] if is_high_confidence_family else family_matches
-            )
+            best_family["top_security"] = best_sec["security_name"]
+            best_family["normalized_security_name"] = best_sec["normalized_security_name"]
+            best_family["security_type"] = best_sec["security_type"]
+            best_family["security_score"] = best_sec["score"]
+            security_confidence = _es_scaled(best_sec["score"])
+        else:
+            matched = False
+            best_family["top_security"] = None
+            best_family["security_score"] = 0.0
+            security_confidence = 0.0
+    else:
+        security_confidence = 0.0
 
-            # Search securities within the resolved family, or across all
-            # candidate families when family confidence is still low.
-            reranked_securities = search_securities_es(
-                security_query,
-                candidate_families,
-                family_query=family_query
-            )
- 
-            if reranked_securities and reranked_securities[0]["score"] > 0.0:
-                matched = True
-                best_sec = reranked_securities[0]
-
- 
-                
-                best_family["top_security"] = best_sec["security_name"]
-                best_family["normalized_security_name"] = best_sec["normalized_security_name"]
-                best_family["security_type"] = best_sec["security_type"]
-                best_family["security_score"] = best_sec["score"]
-            else:
-                matched = False
-                best_family["top_security"] = None
-                best_family["security_score"] = 0.0
- 
-        # -----------------------------
-        # Final Response
-        # -----------------------------
-        result = {
+    # -----------------------------
+    # Final Response
+    # -----------------------------
+    result = {
+        "input": {
             "company_input": family_string,
             "security_input": security_string,
-            "normalized_company_query": family_query,
-            "normalized_security_query": security_query,
-            "matched": matched,
-            "match_type": "direct" if matched else None,
-            "mapped_security": None,
+            "company_query": family_query,
+            "security_query": security_query,
+        },
+        "mapped": {
             "mapped_family": None,
+            "mapped_security": None,
             "filetype": None,
             "mapped_at": None,
-            "best_family_match": (
-                {
-                    "family_name": best_family.get("family_name"),
-                    "normalized_family_name": best_family.get("normalized_family_name"),
-                    "top_security": best_family.get("top_security"),
-                    "normalized_security_name": best_family.get("normalized_security_name"),
-                    "score": best_family.get("score"),
-                    "raw_es_score": best_family.get("raw_es_score"),
-                    "security_score": best_family.get("security_score"),
-                }
-                if best_family
-                else None
-            ),
-            "master_document": (
-                {
-                    "family_name": master_document_snapshot.get("family_name"),
-                    "normalized_family_name": master_document_snapshot.get("normalized_family_name"),
-                    "soi_name": master_document_snapshot.get("soi_name"),
-                    "security_type": master_document_snapshot.get("security_type"),
-                    "security_name": master_document_snapshot.get("top_security"),
-                }
-                if master_document_snapshot
-                else None
-            ),
-            "top_matching_families": [
+        },
+        "match": {
+            "top_security": best_family.get("top_security") if best_family else None,
+            "family_confidence": best_family.get("score", 0.0) if best_family else 0.0,
+            "security_confidence": security_confidence,
+            "matched": matched,
+            "match_type": "direct" if matched else "unmatched",
+        },
+        "master_data": (
+            {
+                "family_name": best_family.get("family_name"),
+                "normalized_family_name": best_family.get("normalized_family_name"),
+                "soi_name": best_family.get("soi_name"),
+                "security_name": best_family.get("top_security"),
+                "normalized_security_name": best_family.get("normalized_security_name"),
+                "security_type": best_family.get("security_type"),
+            }
+            if best_family
+            else None
+        ),
+
+        "candidates": {
+            "top_families": [
                 {
                     "family_name": f["family_name"],
                 }
                 for f in family_matches
             ],
+            "ranked_securities": reranked_securities,
+        },
+    }
 
-            "ranked_family_securities":
-                reranked_securities,
-        }
- 
+    return result
+
+
+@app.route(
+    route="map-security",
+    methods=["POST"]
+)
+def map_security_api(
+    req: func.HttpRequest
+) -> func.HttpResponse:
+
+    logging.info(
+        "Received mapping request"
+    )
+
+    try:
+        body = req.get_json()
+
+        conn_string = os.environ.get("POSTGRES_CONN")
+        if not conn_string:
+            raise Exception("POSTGRES_CONN not found")
+
+        # Batch mode: a bare JSON array of {input, security_input} objects.
+        if isinstance(body, list):
+            results = []
+
+            for item in body:
+                item_family_string = item.get("input")
+                item_security_string = item.get("security_input") or item_family_string
+
+                if not item_family_string:
+                    results.append({"error": "Input string is required"})
+                    continue
+
+                try:
+                    results.append(
+                        _resolve_security_mapping(
+                            item_family_string,
+                            item_security_string,
+                            conn_string
+                        )
+                    )
+                except Exception as e:
+                    logging.error(f"Error mapping item ({item_family_string}): {e}")
+                    results.append({"error": str(e)})
+
+            return func.HttpResponse(
+                json.dumps(results),
+                status_code=200,
+                mimetype="application/json"
+            )
+
+        # Single-item mode
+        family_string = body.get("input")
+        security_string = body.get("security_input") or family_string
+
+        if not family_string:
+            return func.HttpResponse(
+                json.dumps({
+                    "error": "Input string is required"
+                }),
+                status_code=400,
+                mimetype="application/json"
+            )
+
+        result = _resolve_security_mapping(family_string, security_string, conn_string)
+
         return func.HttpResponse(
             json.dumps(result),
             status_code=200,
             mimetype="application/json"
         )
- 
+
     except Exception as e:
- 
+
         logging.error(
             f"Error: {str(e)}"
         )
- 
+
         return func.HttpResponse(
             json.dumps({
                 "error": str(e)
             }),
- 
+
             status_code=500,
             mimetype="application/json"
         )
- 
- 
-      

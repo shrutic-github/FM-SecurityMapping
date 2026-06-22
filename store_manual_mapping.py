@@ -93,13 +93,13 @@ if __name__ == "__main__":
     # Example usage:
     # Change these values to insert your manual overrides
     store_manual_mapping(
-        source_family="Knexus Holdco, LLC - Preferred Equity",
-        source_security="Knexus Holdco, LLC - Preferred Equity",
-        target_security_name="C5MI (Preferred Equity)",
-        filetype="daily_long_short",
-        loan_type="",
+        source_family="PlayPower, Inc.",
+        source_security="PlayPower T/L (5/19)",
+        target_security_name="Planview (TL)",
+        filetype="us bank cashfile",
+        loan_type="Term Loan",
         metadata={
-            "loanxid": "",
+            "loanxid": "LX179874",
             "Identifier": "",
             "source_file_id": "",
         }

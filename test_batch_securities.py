@@ -119,18 +119,23 @@ def process_row(row):
             "error": api_result["error"],
         }
 
-    match_type = api_result.get("match_type")
+    match_info = api_result.get("match") or {}
+    match_type = match_info.get("match_type")
 
+    # Historical/indirect (bypass) responses nest the master record
+    # under mapped.master_security_details instead of master_data.
     if match_type in ("historical", "indirect"):
-        best_family = api_result.get("mastercomp_document") or {}
+        master_data = (api_result.get("mapped") or {}).get(
+            "master_security_details"
+        ) or {}
     else:
-        best_family = api_result.get("best_family_match") or {}
+        master_data = api_result.get("master_data") or {}
 
     predicted_family = (
-        best_family.get("family_name")
-        or best_family.get("normalized_family_name")
+        master_data.get("family_name")
+        or master_data.get("normalized_family_name")
     )
-    predicted_security = best_family.get("top_security")
+    predicted_security = master_data.get("security_name")
 
     return {
         "input": input_text,
@@ -143,7 +148,7 @@ def process_row(row):
         "predicted_security": predicted_security,
         "security_correct": predicted_security == expected_security,
         "match_type": match_type,
-        "matched_flag": api_result.get("matched"),
+        "matched_flag": match_info.get("matched"),
         "status": "OK",
         "error": None,
     }

@@ -4,7 +4,9 @@ import azure.functions as func
 import psycopg2
 import json
 import math
-from elasticsearch import Elasticsearch
+import hashlib
+from datetime import datetime, timezone
+from elasticsearch import Elasticsearch, NotFoundError
 from normalization import normalize_input
 from config import FAMILY_RETRIEVAL_CONFIG, SECURITY_RETRIEVAL_CONFIG, MAPPED_FAMILY_RETRIEVAL_CONFIG,MAPPED_SECURITY_RETRIEVAL_CONFIG
  
@@ -909,6 +911,66 @@ def _resolve_security_mapping(
     return result
 
 
+# -----------------------------
+# Mapping Storage Helpers
+# -----------------------------
+def _mapping_doc_id(normalized_company: str, normalized_security: str) -> str:
+    return hashlib.sha256(
+        f"{normalized_company}|{normalized_security}".encode("utf-8")
+    ).hexdigest()
+
+
+def _fetch_master_security_doc(es: Elasticsearch, index_name: str, security_name: str) -> dict:
+    if not security_name:
+        return {}
+
+    res = es.search(
+        index=index_name,
+        body={
+            "size": 1,
+            "query": {
+                "bool": {
+                    "must": [{"term": {"security_name.keyword": security_name}}],
+                    "must_not": [{"term": {"is_alias": True}}],
+                }
+            },
+        },
+    )
+    hits = res.get("hits", {}).get("hits", [])
+    return hits[0]["_source"] if hits else {}
+
+
+def _build_mapping_doc(
+    company_input: str,
+    security_input: str,
+    normalized_company: str,
+    normalized_security: str,
+    master_doc: dict,
+    filetype: str = "",
+    loan_type: str = "",
+    metadata: dict = None,
+) -> dict:
+    return {
+        "is_alias": True,
+        "company_name": company_input,
+        "normalized_company_name": normalized_company,
+        "security_name": security_input,
+        "normalized_security_name": normalized_security,
+        "filetype": filetype or "",
+        "loan_type": loan_type or master_doc.get("security_type", ""),
+        "master_security_details": master_doc,
+        "master_family_name": master_doc.get("family_name", ""),
+        "master_normalized_family_name": master_doc.get("normalized_family_name", ""),
+        "master_security_name": master_doc.get("security_name", ""),
+        "master_normalized_security_name": master_doc.get("normalized_security_name", ""),
+        "master_soi_name": master_doc.get("soi_name", ""),
+        "master_normalized_soi_name": master_doc.get("normalized_soi_name", ""),
+        "master_security_type": master_doc.get("security_type", ""),
+        "metadata": metadata or {},
+        "ingested_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 @app.route(
     route="map-security",
     methods=["POST"]
@@ -979,6 +1041,220 @@ def security_mapping_api(
                 "error": str(e)
             }),
 
+            status_code=500,
+            mimetype="application/json"
+        )
+
+
+# -----------------------------
+# Create / Store Reviewed Mapping
+# -----------------------------
+@app.route(
+    route="mappings",
+    methods=["POST"]
+)
+def create_mapping_api(
+    req: func.HttpRequest
+) -> func.HttpResponse:
+
+    try:
+        body = req.get_json()
+
+        company_input = body.get("company_input")
+        security_input = body.get("security_input")
+        target_security_name = body.get("target_security_name")
+
+        if not company_input or not security_input or not target_security_name:
+            return func.HttpResponse(
+                json.dumps({
+                    "error": "company_input, security_input, and target_security_name are required"
+                }),
+                status_code=400,
+                mimetype="application/json"
+            )
+
+        conn_string = os.environ.get("POSTGRES_CONN")
+        if not conn_string:
+            raise Exception("POSTGRES_CONN not found")
+
+        norm_company = normalize_input(company_input, conn_string)["normalized_query"]
+        norm_security = normalize_input(security_input, conn_string)["normalized_query"]
+
+        es = get_es_client()
+        index_name = os.environ.get("ES_INDEX", "security_master_v4")
+
+        master_doc = _fetch_master_security_doc(es, index_name, target_security_name)
+
+        mapping_doc = _build_mapping_doc(
+            company_input,
+            security_input,
+            norm_company,
+            norm_security,
+            master_doc,
+            filetype=body.get("filetype", ""),
+            loan_type=body.get("loan_type", ""),
+            metadata=body.get("metadata"),
+        )
+
+        doc_id = _mapping_doc_id(norm_company, norm_security)
+
+        es.index(index=index_name, id=doc_id, document=mapping_doc)
+
+        return func.HttpResponse(
+            json.dumps({"id": doc_id, "mapping": mapping_doc}),
+            status_code=201,
+            mimetype="application/json"
+        )
+
+    except Exception as e:
+        logging.error(f"Error creating mapping: {e}")
+        return func.HttpResponse(
+            json.dumps({"error": str(e)}),
+            status_code=500,
+            mimetype="application/json"
+        )
+
+
+# -----------------------------
+# Get Stored Mapping
+# -----------------------------
+@app.route(
+    route="mappings/{id}",
+    methods=["GET"]
+)
+def get_mapping_api(
+    req: func.HttpRequest
+) -> func.HttpResponse:
+
+    doc_id = req.route_params.get("id")
+
+    try:
+        es = get_es_client()
+        index_name = os.environ.get("ES_INDEX", "security_master_v4")
+
+        try:
+            res = es.get(index=index_name, id=doc_id)
+        except NotFoundError:
+            return func.HttpResponse(
+                json.dumps({"error": "Mapping not found"}),
+                status_code=404,
+                mimetype="application/json"
+            )
+
+        return func.HttpResponse(
+            json.dumps({"id": doc_id, "mapping": res["_source"]}),
+            status_code=200,
+            mimetype="application/json"
+        )
+
+    except Exception as e:
+        logging.error(f"Error fetching mapping {doc_id}: {e}")
+        return func.HttpResponse(
+            json.dumps({"error": str(e)}),
+            status_code=500,
+            mimetype="application/json"
+        )
+
+
+# -----------------------------
+# Update Stored Mapping
+# -----------------------------
+@app.route(
+    route="mappings/{id}",
+    methods=["PUT"]
+)
+def update_mapping_api(
+    req: func.HttpRequest
+) -> func.HttpResponse:
+
+    doc_id = req.route_params.get("id")
+
+    try:
+        es = get_es_client()
+        index_name = os.environ.get("ES_INDEX", "security_master_v4")
+
+        try:
+            existing = es.get(index=index_name, id=doc_id)["_source"]
+        except NotFoundError:
+            return func.HttpResponse(
+                json.dumps({"error": "Mapping not found"}),
+                status_code=404,
+                mimetype="application/json"
+            )
+
+        body = req.get_json()
+
+        target_security_name = body.get("target_security_name")
+        master_doc = (
+            _fetch_master_security_doc(es, index_name, target_security_name)
+            if target_security_name
+            else (existing.get("master_security_details") or {})
+        )
+
+        mapping_doc = _build_mapping_doc(
+            existing.get("company_name", ""),
+            existing.get("security_name", ""),
+            existing.get("normalized_company_name", ""),
+            existing.get("normalized_security_name", ""),
+            master_doc,
+            filetype=body.get("filetype", existing.get("filetype", "")),
+            loan_type=body.get("loan_type", existing.get("loan_type", "")),
+            metadata=body.get("metadata", existing.get("metadata", {})),
+        )
+
+        es.index(index=index_name, id=doc_id, document=mapping_doc)
+
+        return func.HttpResponse(
+            json.dumps({"id": doc_id, "mapping": mapping_doc}),
+            status_code=200,
+            mimetype="application/json"
+        )
+
+    except Exception as e:
+        logging.error(f"Error updating mapping {doc_id}: {e}")
+        return func.HttpResponse(
+            json.dumps({"error": str(e)}),
+            status_code=500,
+            mimetype="application/json"
+        )
+
+
+# -----------------------------
+# Delete Stored Mapping
+# -----------------------------
+@app.route(
+    route="mappings/{id}",
+    methods=["DELETE"]
+)
+def delete_mapping_api(
+    req: func.HttpRequest
+) -> func.HttpResponse:
+
+    doc_id = req.route_params.get("id")
+
+    try:
+        es = get_es_client()
+        index_name = os.environ.get("ES_INDEX", "security_master_v4")
+
+        try:
+            es.delete(index=index_name, id=doc_id)
+        except NotFoundError:
+            return func.HttpResponse(
+                json.dumps({"error": "Mapping not found"}),
+                status_code=404,
+                mimetype="application/json"
+            )
+
+        return func.HttpResponse(
+            json.dumps({"deleted": True, "id": doc_id}),
+            status_code=200,
+            mimetype="application/json"
+        )
+
+    except Exception as e:
+        logging.error(f"Error deleting mapping {doc_id}: {e}")
+        return func.HttpResponse(
+            json.dumps({"error": str(e)}),
             status_code=500,
             mimetype="application/json"
         )

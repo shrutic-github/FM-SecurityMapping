@@ -5,9 +5,8 @@ import psycopg2
 import json
 import math
 from elasticsearch import Elasticsearch
- 
 from normalization import normalize_input
-from config import FAMILY_RETRIEVAL_CONFIG, ASSET_TYPE_BOOST_CONFIG, SECURITY_RETRIEVAL_CONFIG
+from config import FAMILY_RETRIEVAL_CONFIG, SECURITY_RETRIEVAL_CONFIG, MAPPED_FAMILY_RETRIEVAL_CONFIG,MAPPED_SECURITY_RETRIEVAL_CONFIG
  
 app = func.FunctionApp()
 ES_CLIENT = None
@@ -240,7 +239,7 @@ def search_family_matches(family_query: str) -> list[dict]:
             "match_phrase": {
                 "normalized_family_name": {
                     "query": cleaned_family_query,
-                    "boost": 30,
+                    "boost": FAMILY_RETRIEVAL_CONFIG["match_phrase_family_boost"],
                 }
             }
         },
@@ -249,8 +248,8 @@ def search_family_matches(family_query: str) -> list[dict]:
                 "normalized_family_name": {
                     "query": cleaned_family_query,
                     "operator": "or",
-                    "minimum_should_match": "50%",
-                    "boost": 15,
+                    "minimum_should_match": FAMILY_RETRIEVAL_CONFIG["match_family_min_should_match"],
+                    "boost":  FAMILY_RETRIEVAL_CONFIG["match_family_boost"],
                 }
             }
         },
@@ -260,7 +259,7 @@ def search_family_matches(family_query: str) -> list[dict]:
             "match_phrase": {
                 "normalized_soi_name": {
                     "query": cleaned_family_query,
-                    "boost": 25,
+                    "boost": FAMILY_RETRIEVAL_CONFIG["match_phrase_soi_boost"],
                 }
             }
         },
@@ -269,8 +268,8 @@ def search_family_matches(family_query: str) -> list[dict]:
                 "normalized_soi_name": {
                     "query": cleaned_family_query,
                     "operator": "or",
-                    "minimum_should_match": "50%",
-                    "boost": 20,
+                    "minimum_should_match": FAMILY_RETRIEVAL_CONFIG["match_soi_min_should_match"],
+                    "boost": FAMILY_RETRIEVAL_CONFIG["match_soi_boost"],
                 }
             }
         },
@@ -279,7 +278,7 @@ def search_family_matches(family_query: str) -> list[dict]:
             "match_phrase": {
                 "normalized_security_name": {
                     "query": family_query,
-                    "boost": 10,
+                    "boost": FAMILY_RETRIEVAL_CONFIG["match_phrase_security_boost"],
                 }
             }
         },
@@ -288,7 +287,7 @@ def search_family_matches(family_query: str) -> list[dict]:
                 "normalized_security_name": {
                     "query": family_query,
                     "operator": "or",
-                    "boost": 8,
+                    "boost": FAMILY_RETRIEVAL_CONFIG["match_security_boost"],
                 }
             }
         },
@@ -324,15 +323,10 @@ def search_family_matches(family_query: str) -> list[dict]:
                              "query": cleaned_family_query,
                            "fields": ["normalized_company_name^50", "normalized_security_name^30"],
                              "type": "phrase",
-                             "boost": 30,
+                             "boost": MAPPED_FAMILY_RETRIEVAL_CONFIG["multi_match_phrase_company_boost"],
                         }},
 
-                     {"match_phrase": {"master_normalized_family_name": {"query": cleaned_family_query, "boost": 30}}},
-                     {"match": {"master_normalized_family_name": {"query": cleaned_family_query, "operator": "or", "minimum_should_match": "70%", "boost": 15}}},
-                     {"match_phrase": {"master_normalized_soi_name": {"query": cleaned_family_query, "boost": 25}}},
-                     {"match": {"master_normalized_soi_name": {"query": cleaned_family_query, "operator": "or", "minimum_should_match": "70%", "boost": 20}}},
-                     {"match_phrase": {"master_normalized_security_name": {"query": cleaned_family_query, "boost": 10}}},
-                     {"match": {"master_normalized_security_name": {"query": cleaned_family_query, "operator": "or", "minimum_should_match": "70%", "boost": 8}}},
+                    
                 ],
                 "minimum_should_match": 1,
             }
@@ -461,7 +455,7 @@ def search_securities_es(
             "match_phrase": {
                 "normalized_security_name": {
                     "query": security_query,
-                    "boost": 30,
+                    "boost": SECURITY_RETRIEVAL_CONFIG["match_phrase_sec_boost"],
                 }
             }
         },
@@ -470,8 +464,8 @@ def search_securities_es(
                 "normalized_security_name": {
                     "query": security_query,
                     "operator": "or",
-                    "minimum_should_match": "50%",
-                    "boost": 10,
+                    "minimum_should_match": SECURITY_RETRIEVAL_CONFIG["match_sec_or_min_should_match"],
+                    "boost": SECURITY_RETRIEVAL_CONFIG["match_sec_or_boost"],
                 }
             }
         },
@@ -482,8 +476,8 @@ def search_securities_es(
                 "fields": ["normalized_security_name", "normalized_soi_name"],
                 "type": "cross_fields",
                 "operator": "or",
-                "minimum_should_match": "50%",
-                "boost": 25,
+                "minimum_should_match": SECURITY_RETRIEVAL_CONFIG["multi_match_security_soi_min_should_match"],
+                "boost": SECURITY_RETRIEVAL_CONFIG["multi_match_security_soi_boost"],
             }
         },
 
@@ -493,8 +487,8 @@ def search_securities_es(
                 "fields": ["normalized_security_name", "normalized_soi_name"],
                 "type": "cross_fields",
                 "operator": "or",
-                "minimum_should_match": "10%",
-                "boost": 10,
+                "minimum_should_match": SECURITY_RETRIEVAL_CONFIG["multi_match_sec_soi_fields_broad_boost_min_should_match"],
+                "boost": SECURITY_RETRIEVAL_CONFIG["multi_match_sec_soi_fields_broad_boost"],
             }
         },
  
@@ -564,33 +558,17 @@ def search_securities_es(
                         {"terms": {"master_normalized_family_name.keyword": normalized_family_names}},
                     ],
                     "should": [
-                        # {"multi_match": {
-                        #     "query": security_query,
-                        #     "fields": ["normalized_company_name^30", "normalized_security_name^50"],
-                        #     "type": "phrase",
-                        #     "boost": 30,
-                        # }},
-                        {"match_phrase": {"normalized_security_name": {"query": security_query, "boost": 30}}},
-                        {"match_phrase": {"master_normalized_security_name": {"query": security_query, "boost": 30}}},
-                        {"match": {"master_normalized_security_name": {"query": security_query, "operator": "or", "minimum_should_match": "70%", "boost": 10}}},
-                
+                        {"multi_match": {
+                            "query": security_query,
+                            "fields": ["normalized_company_name^30", "normalized_security_name^50"],
+                            "type": "phrase",
+                            "boost": MAPPED_SECURITY_RETRIEVAL_CONFIG["multi_match_company_security_boost"],
+                        }},
+                        # {"match_phrase": {"normalized_security_name":
+                        #                    {"query": security_query, 
+                        #                     "boost": MAPPED_SECURITY_RETRIEVAL_CONFIG["match_phrase_alias_sec_boost"]
+                        #                     }}},
                       
-                        {"multi_match": {
-                            "query": security_query,
-                            "fields": ["master_normalized_security_name", "master_normalized_soi_name"],
-                            "type": "cross_fields",
-                            "operator": "or",
-                            "minimum_should_match": "50%",
-                            "boost": 25,
-                        }},
-                        {"multi_match": {
-                            "query": security_query,
-                            "fields": ["master_normalized_security_name", "master_normalized_security_type"],
-                            "type": "cross_fields",
-                            "operator": "or",
-                            "minimum_should_match": "70%",
-                            "boost": 20,
-                        }},
 
                         
                     ],
@@ -703,6 +681,7 @@ def _resolve_security_mapping(
     # -----------------------------
     # Check for Mapped Security Bypass (Indirect Match)
     # -----------------------------
+    is_mapped=False
     try:
             es_client = get_es_client()
             index_name = os.environ.get("ES_INDEX", "security_master_v4")
@@ -746,6 +725,9 @@ def _resolve_security_mapping(
             if bypass_hits:
                 bypass_source = bypass_hits[0]["_source"]
                 is_alias = bypass_source.get("is_alias", False)
+               
+                if is_alias:
+                    is_mapped = True
                 
                 if is_alias:
                     # Check match type (exact historical vs indirect)
@@ -774,6 +756,7 @@ def _resolve_security_mapping(
                         "company_query": family_query,
                         "security_query": security_query, 
                     },
+                    "is_mapped":is_mapped,
                     "mapped": {
                         "mapped_family": master_details.get("family_name", "") if is_alias else None,
                         "mapped_security": master_details.get("security_name", "") if is_alias else None,
@@ -829,7 +812,7 @@ def _resolve_security_mapping(
     if best_family:
 
         # A score of 1.0 means the family was resolved via an
-        # alias-confirmed match, not a fuzzy token-overlap guess -
+        # mapped-confirmed match, not a fuzzy token-overlap guess -
         # trust it and don't let a weaker cross-family security
         # match override it.
         is_high_confidence_family = best_family.get("score", 0.0) >= 1.0
@@ -890,12 +873,8 @@ def _resolve_security_mapping(
             "company_query": family_query,
             "security_query": security_query,
         },
-        "mapped": {
-            "mapped_family": None,
-            "mapped_security": None,
-            "filetype": None,
-            "mapped_at": None,
-        },
+        "is_mapped":is_mapped,
+        
         "match": {
             "top_security": best_family.get("top_security") if best_family else None,
             "family_confidence": best_family.get("score", 0.0) if best_family else 0.0,
@@ -934,7 +913,7 @@ def _resolve_security_mapping(
     route="map-security",
     methods=["POST"]
 )
-def map_security_api(
+def security_mapping_api(
     req: func.HttpRequest
 ) -> func.HttpResponse:
 
@@ -944,6 +923,14 @@ def map_security_api(
 
     try:
         body = req.get_json()
+        if not isinstance(body, list):
+            return func.HttpResponse(
+        json.dumps({
+            "error": "Payload must be a JSON array"
+                    }),
+        status_code=400,
+        mimetype="application/json"
+    )
 
         conn_string = os.environ.get("POSTGRES_CONN")
         if not conn_string:
@@ -954,8 +941,9 @@ def map_security_api(
             results = []
 
             for item in body:
-                item_family_string = item.get("input")
+                item_family_string = item.get("company_input")
                 item_security_string = item.get("security_input") or item_family_string
+                item_file_type = item.get("file_type")
 
                 if not item_family_string:
                     results.append({"error": "Input string is required"})
@@ -979,26 +967,6 @@ def map_security_api(
                 mimetype="application/json"
             )
 
-        # Single-item mode
-        family_string = body.get("input")
-        security_string = body.get("security_input") or family_string
-
-        if not family_string:
-            return func.HttpResponse(
-                json.dumps({
-                    "error": "Input string is required"
-                }),
-                status_code=400,
-                mimetype="application/json"
-            )
-
-        result = _resolve_security_mapping(family_string, security_string, conn_string)
-
-        return func.HttpResponse(
-            json.dumps(result),
-            status_code=200,
-            mimetype="application/json"
-        )
 
     except Exception as e:
 

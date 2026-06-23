@@ -1,72 +1,57 @@
 # -----------------------------
-# Phase 1: Family Retrieval Configuration
+# Phase 1: Family Retrieval — Direct (non-alias) query
 # -----------------------------
 FAMILY_RETRIEVAL_CONFIG = {
     # Family name matching
     "match_phrase_family_boost": 30,
     "match_family_boost": 15,
     "match_family_min_should_match": "50%",
-    
-    # SOI (Statement of Intent) name matching
+
+    # SOI name matching
     "match_phrase_soi_boost": 25,
     "match_soi_boost": 20,
     "match_soi_min_should_match": "50%",
-    
-    # Security name matching
+
+    # Security name matching (fallback signal)
     "match_phrase_security_boost": 10,
-    "match_security_boost": 8
+    "match_security_boost": 8,
 }
 
 # -----------------------------
-# Post-ES Asset Type Boosting Config
+# Phase 1: Family Retrieval — Alias query
 # -----------------------------
-ASSET_TYPE_BOOST_CONFIG = {
-    "ddtl": {
-        "match_token": "delayed draw",
-        "boost": 0.3,
-        "penalty_token": "term loan",
-        "penalty": -0.1
-    },
-    "tl": {
-        "match_token": "term loan",
-        "boost": 0.2,
-        "penalty_token": "revolver",
-        "penalty": -0.1
-    },
-    "rev": {
-        "match_token": "revolver",
-        "boost": 0.2,
-        "penalty": -0.1
-    },
-    "equity": {
-        "match_token": "equity",
-        "boost": 0.2,
-        "penalty": -0.1
-    }
+MAPPED_FAMILY_RETRIEVAL_CONFIG = {
+    # Company name phrase match (highest priority — exact stored alias)
+    # Fields: normalized_company_name^50, normalized_security_name^30
+    "multi_match_phrase_company_boost": 30,
+
 }
 
 # -----------------------------
-# Phase 2: Security Retrieval Configuration
+# Phase 2: Security Retrieval — Direct (non-alias) query
 # -----------------------------
 SECURITY_RETRIEVAL_CONFIG = {
-    # Normalized security name matches
+    # Exact phrase match on normalized security name
     "match_phrase_sec_boost": 30,
-    
-    # Combination of match(or) on security name and match(or) on soi name (cross_fields)
-    "match_sec_cross_fields_boost": 25,
-    "match_sec_cross_fields_min_should_match": "50%",
-    
-    # Or-match on normalized_security_name
+
+    # OR match on normalized security name
     "match_sec_or_boost": 10,
     "match_sec_or_min_should_match": "50%",
 
-    # Combination of match(or) on security name and match(or) on soi name (cross_fields, broad match)
-    "match_sec_cross_fields_broad_boost": 10,
-    "match_sec_cross_fields_broad_min_should_match": "10%",
-    
-    # Inactive/Commented-out tiers in function_app.py Phase 2 query:
-    # "match_family_or_boost": 15,
-    # "match_family_or_min_should_match": "35%",
-    # "match_sec_type_or_boost": 20,
-    # "match_sec_type_or_min_should_match": "20%"
+    # Cross-fields match across security name + soi name (precise)
+    "multi_match_security_soi_boost": 25,
+    "multi_match_security_soi_min_should_match": "50%",
+
+    # Cross-fields match across security name + soi name (broad retrieval)
+    "multi_match_sec_soi_fields_broad_boost": 10,
+    "multi_match_sec_soi_fields_broad_boost_min_should_match": "10%",
 }
+
+# -----------------------------
+# Phase 2: Security Retrieval — Alias query
+# -----------------------------
+MAPPED_SECURITY_RETRIEVAL_CONFIG = {
+    # Phrase match on alias's own normalized_security_name
+    "multi_match_company_security_boost": 30,
+}
+

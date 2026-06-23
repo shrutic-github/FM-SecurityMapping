@@ -2,17 +2,18 @@
 POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
+[
 {
-  "input": "Events Buyer, LLC",
+  "company_input": "Events Buyer, LLC",
   "security_input": "Events buyer Term loan"
 }
-
+]
 ### 2
 POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "48forty Intermediate Holdings, Inc.",
+  "company_input": "48forty Intermediate Holdings, Inc.",
   "security_input": "48Forty Intermediate Holdings common equity 1506"
 }
 
@@ -20,17 +21,18 @@ Content-Type: application/json
 POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
+[
 {
-  "input": "48forty Intermediate Holdings, Inc.",
+  "company_input": "48forty Intermediate Holdings, Inc.",
   "security_input": "48Forty Intermediate Holdings C/S"
 }
-
+]
 ### 4
 POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Aechelon Technology Inc.",
+  "company_input": "Aechelon Technology Inc.",
   "security_input": "Aechelon Technology  T/L "
 }
 
@@ -39,7 +41,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "AFC-Dell Holding Corp.",
+  "company_input": "AFC-Dell Holding Corp.",
   "security_input": "AFC-Dell Holding DD T/L (12/23)"
 }
 
@@ -48,7 +50,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "AFC-Dell Holding Corp.",
+  "company_input": "AFC-Dell Holding Corp.",
   "security_input": "AFC-Dell Holding T/L"
 }
 
@@ -57,7 +59,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Burgess Point Purchaser Corporation",
+  "company_input": "Burgess Point Purchaser Corporation",
   "security_input": "Burgess Point Purchaser Corporation (BBB)  T/L (06/22)"
 }
 
@@ -66,7 +68,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "BLC Holding Company, Inc.",
+  "company_input": "BLC Holding Company, Inc.",
   "security_input": "BLC Holding Company DD T/L"
 }
 
@@ -75,7 +77,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Bluebird Group LLC, The",
+  "company_input": "Bluebird Group LLC, The",
   "security_input": "Bluebird Group T/L"
 }
 
@@ -84,7 +86,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Aegis Technologies Group, LLC, The",
+  "company_input": "Aegis Technologies Group, LLC, The",
   "security_input": "Aegis Technologies Group (BlueHalo) 4th Amend T/L"
 }
 
@@ -93,7 +95,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "BlueHalo Global Holdings, LLC",
+  "company_input": "BlueHalo Global Holdings, LLC",
   "security_input": "BlueHalo Global (Aegis) T/L 4th Amend  **DUPLICATE - PLEASE USE BL0623316**"
 }
 
@@ -102,7 +104,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "By Light Professional IT Services LLC",
+  "company_input": "By Light Professional IT Services LLC",
   "security_input": "By Light Professional R/C 2"
 }
 
@@ -111,7 +113,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Lightspeed Buyer, Inc.",
+  "company_input": "Lightspeed Buyer, Inc.",
   "security_input": "Lightspeed Buyer VT1 R/C"
 }
 
@@ -120,7 +122,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Dr. Squatch, LLC",
+  "company_input": "Dr. Squatch, LLC",
   "security_input": "Dr. Squatch T/L"
 }
 
@@ -129,7 +131,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "GGG Midco, LLC",
+  "company_input": "GGG Midco, LLC",
   "security_input": "GGG Midco DD T/L"
 }
 
@@ -138,7 +140,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Infinity Home Services Holdco, Inc",
+  "company_input": "Infinity Home Services Holdco, Inc",
   "security_input": "Infinity Home Services Holdco Amend. 1 DD T/L"
 }
 
@@ -147,7 +149,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Lash Opco, LLC",
+  "company_input": "Lash Opco, LLC",
   "security_input": "Lash Opco Restatement T/L--MC178414"
 }
 
@@ -156,7 +158,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "OSP EMBEDDED PURCHASER, LLC",
+  "company_input": "OSP EMBEDDED PURCHASER, LLC",
   "security_input": "OSP Embedded Purchaser Incremental T/L (11/24)"
 }
 
@@ -165,7 +167,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Anteriad, LLC",
+  "company_input": "Anteriad, LLC",
   "security_input": "Anteriad (MeritDirect) Incremental T/L B"
 }
 
@@ -174,7 +176,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "MeritDirect, LLC",
+  "company_input": "MeritDirect, LLC",
   "security_input": "MeritDirect T/L A (MeritB2B/Anteriad)"
 }
 
@@ -183,7 +185,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "OSG Topco Holdings LLC - Class A Unit",
+  "company_input": "OSG Topco Holdings LLC - Class A Unit",
   "security_input": "OSG Topco Holdings LLC - Class A Unit"
 }
 
@@ -193,7 +195,7 @@ Content-Type: application/json
 
 
 {
-  "input": "Pragmatic Institute, LLC",
+  "company_input": "Pragmatic Institute, LLC",
   "security_input": "Pragmatic Institute C/S (03/25)"
 }
 
@@ -202,7 +204,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Paving Lessor Corp.",
+  "company_input": "Paving Lessor Corp.",
   "security_input": "Paving Lessor Initial T/L"
 }
 
@@ -211,7 +213,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Lightspeed Buyer, Inc.",
+  "company_input": "Lightspeed Buyer, Inc.",
   "security_input": "Lightspeed Buyer T/L"
 }
 
@@ -220,7 +222,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "NFS - CFP Holdings LLC",
+  "company_input": "NFS - CFP Holdings LLC",
   "security_input": "NFS - CFP Holdings Incremental T/L"
 }
 
@@ -229,7 +231,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "DRS Holdings III, Inc.",
+  "company_input": "DRS Holdings III, Inc.",
   "security_input": "DRS Holdings III Amendment No. 4 Incremental T/L"
 }
 
@@ -238,7 +240,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Arcline FM Holdings LLC",
+  "company_input": "Arcline FM Holdings LLC",
   "security_input": "Arcline FM Holdings T/L (7/24) (Fairbanks Morse) - Target "
 }
 
@@ -247,7 +249,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Management Consulting & Research, LLC",
+  "company_input": "Management Consulting & Research, LLC",
   "security_input": "Management Consulting & Research T/L (Systems Planning and Analysis)"
 }
 
@@ -256,7 +258,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "PlayPower, Inc.",
+  "company_input": "PlayPower, Inc.",
   "security_input": "PlayPower T/L (5/19)"
 }
 
@@ -265,7 +267,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "PlayPower, Inc.",
+  "company_input": "PlayPower, Inc.",
   "security_input": "PlayPower T/L (08/24)"
 }
 
@@ -275,7 +277,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "The Track Branson Opco, LLC",
+  "company_input": "The Track Branson Opco, LLC",
   "security_input": "The Track Branson Opco DDTL"
 }
 
@@ -284,15 +286,15 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Sath Industries LLC",
-  "security_input": "Sath Industries LLC Delayed Draw Term Loan (360DG) 2206"
+  "company_input": "Sath Industries LLC",
+  "security_input": "Sath Industries LLC Delayed Draw Term Loan (360DG)2209 "
 }
 ###
 POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "ABC Industries LLC",
+  "company_input": "ABC Industries LLC",
   "security_input": "ABC Industries LLC Delayed Draw Term Loan (360DG)"
 }
 ### 33
@@ -300,25 +302,27 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "48Forty Intermediate Holdings Inc",
+  "company_input": "48Forty Intermediate Holdings Inc",
   "security_input": "48forty Common Equity"
 }
 
 ### 34
+
 POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
-{
-  "input": "LAV Gear Holdings Inc",
-  "security_input": "Fourteenth Amendment Priority Term Loan"
-}
-
+[
+  {
+    "company_input": "LAV Gear Holdings Inc",
+    "security_input": "Fourteenth Amendment Priority Term Loan"
+  }
+]
 ### 35
 POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Burgess Point Purchaser Corporation",
+  "company_input": "Burgess Point Purchaser Corporation",
   "security_input": "Burgess Point Purchaser Corporation term loan 4th amendment"
 }
 
@@ -327,7 +331,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Big Top Holdings LLC",
+  "company_input": "Big Top Holdings LLC",
   "security_input": "Term Loan"
 }
 
@@ -336,7 +340,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "BlueHalo Global Holdings LLC",
+  "company_input": "BlueHalo Global Holdings LLC",
   "security_input": "Initial Term Loan"
 }
 
@@ -345,7 +349,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "ACP Falcon Buyer Inc",
+  "company_input": "ACP Falcon Buyer Inc",
   "security_input": "Initial Term Loan"
 }
 
@@ -354,7 +358,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Kinetic Purchaser LLC",
+  "company_input": "Kinetic Purchaser LLC",
   "security_input": "Closing Date Term Loan"
 }
 
@@ -363,7 +367,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Radius Aerospace Inc",
+  "company_input": "Radius Aerospace Inc",
   "security_input": "Radius Aerospace Inc UK Term Loan"
 }
 
@@ -372,7 +376,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "RRA Corporate LLC",
+  "company_input": "RRA Corporate LLC",
   "security_input": "RRA Corporate LLC Initial Term Loan"
 }
 
@@ -381,7 +385,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "TMII Enterprises LLC",
+  "company_input": "TMII Enterprises LLC",
   "security_input": "TMII Enterprises LLC DDTL 1st amendment"
 }
 
@@ -390,7 +394,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "TMII Enterprises LLC",
+  "company_input": "TMII Enterprises LLC",
   "security_input": "TMII Enterprises LLC Term Loan A"
 }
 
@@ -399,7 +403,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "SV-Aero Holdings LLC",
+  "company_input": "SV-Aero Holdings LLC",
   "security_input": "SV-Aero Holdings LLC Term Loan"
 }
 
@@ -408,7 +412,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "DRS Holdings III Inc",
+  "company_input": "DRS Holdings III Inc",
   "security_input": "DRS Holdings III Inc 3/25 Term Loan"
 }
 
@@ -417,7 +421,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Systems Planning and Analysis Inc",
+  "company_input": "Systems Planning and Analysis Inc",
   "security_input": "Systems Planning and Analysis Inc Delayed Draw Term Loan A"
 }
 
@@ -426,7 +430,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "North American Rail Solutions",
+  "company_input": "North American Rail Solutions",
   "security_input": "North American Rail Solutions USD Term Loan"
 }
 
@@ -435,7 +439,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "SMX Group LLC",
+  "company_input": "SMX Group LLC",
   "security_input": "SMX Group LLC Term Loan (Smartronix/Trident)"
 }
 
@@ -444,7 +448,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "STG Distribution LLC",
+  "company_input": "STG Distribution LLC",
   "security_input": "STG Distribution LLC First Out New Money Term Loan"
 }
 
@@ -453,7 +457,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Zips Car Wash LLC",
+  "company_input": "Zips Car Wash LLC",
   "security_input": "Zips Car Wash LLC Roll Up Term Loan"
 }
 
@@ -462,7 +466,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "LAV Gear Holdings, Inc.",
+  "company_input": "LAV Gear Holdings, Inc.",
   "security_input": "LAV Gear Holdings, Inc. First Lien - Term Loan - 12th Amend. - Priority FOTL"
 }
 
@@ -471,7 +475,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "A1 Garage Equity, LLC",
+  "company_input": "A1 Garage Equity, LLC",
   "security_input": "A1 Garage Equity, LLC Common Equity"
 }
 
@@ -480,7 +484,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Archer Lewis, LLC",
+  "company_input": "Archer Lewis, LLC",
   "security_input": "Archer Lewis, LLC First Lien - Revolver - Revolver"
 }
 
@@ -489,7 +493,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Beta Plus Technologies, Inc.",
+  "company_input": "Beta Plus Technologies, Inc.",
   "security_input": "Beta Plus Technologies, Inc. Initial Term Loan"
 }
 
@@ -498,7 +502,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Rural Sourcing Holdings, Inc.",
+  "company_input": "Rural Sourcing Holdings, Inc.",
   "security_input": "Rural Sourcing Holdings, Inc. Amendment No. 1 Incremental Term Loans"
 }
 
@@ -507,7 +511,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "TCG 3.0 Jogger Acquisitionco, Inc.",
+  "company_input": "TCG 3.0 Jogger Acquisitionco, Inc.",
   "security_input": "TCG 3.0 Jogger Acquisitionco, Inc. First Lien - Revolver - Revolver"
 }
 
@@ -516,7 +520,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Carnegie Dartlet, LLC",
+  "company_input": "Carnegie Dartlet, LLC",
   "security_input": "Carnegie Dartlet, LLC First Lien - DDTL - DDTL"
 }
 
@@ -525,7 +529,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Medina Health, LLC",
+  "company_input": "Medina Health, LLC",
   "security_input": "Medina Health, LLC Revolving Loan"
 }
 
@@ -534,7 +538,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "GAUGE ETE BLOCKER LLC",
+  "company_input": "GAUGE ETE BLOCKER LLC",
   "security_input": "GAUGE ETE BLOCKER LLC Common Equity"
 }
 
@@ -543,7 +547,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "EDS TOPCO, LP",
+  "company_input": "EDS TOPCO, LP",
   "security_input": "EDS TOPCO, LP Common Equity"
 }
 
@@ -552,7 +556,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "ENC Parent Corporation",
+  "company_input": "ENC Parent Corporation",
   "security_input": "ENC Parent Corporation Initial Term Loan (First Lien)"
 }
 
@@ -561,7 +565,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Best Practice Associates, LLC",
+  "company_input": "Best Practice Associates, LLC",
   "security_input": "Best Practice Associates, LLC First Lien - Term Loan"
 }
 
@@ -570,7 +574,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Infinity Home Services Holdco, Inc.",
+  "company_input": "Infinity Home Services Holdco, Inc.",
   "security_input": "Infinity Home Services Holdco, Inc. Revolving Loan"
 }
 
@@ -579,7 +583,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "MidOcean JF Holdings Corp.",
+  "company_input": "MidOcean JF Holdings Corp.",
   "security_input": "MidOcean JF Holdings Corp. 5th Amendment Term Loan"
 }
 
@@ -588,7 +592,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "4Wall Entertainment",
+  "company_input": "4Wall Entertainment",
   "security_input": "4Wall Entertainment"
 }
 
@@ -597,7 +601,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Aeronix",
+  "company_input": "Aeronix",
   "security_input": "Aeronix"
 }
 
@@ -606,7 +610,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Any Hour Services",
+  "company_input": "Any Hour Services",
   "security_input": "Any Hour Services"
 }
 
@@ -615,7 +619,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Any Hour Services",
+  "company_input": "Any Hour Services",
   "security_input": "Any Hour Services"
 }
 
@@ -624,7 +628,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Cano Health",
+  "company_input": "Cano Health",
   "security_input": "Cano Health"
 }
 
@@ -633,7 +637,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Dr. Scholl's",
+  "company_input": "Dr. Scholl's",
   "security_input": "Dr. Scholl's"
 }
 
@@ -642,7 +646,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Infinity Home Services",
+  "company_input": "Infinity Home Services",
   "security_input": "Infinity Home Services"
 }
 
@@ -651,7 +655,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "KNS",
+  "company_input": "KNS",
   "security_input": "KNS"
 }
 
@@ -660,7 +664,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Recteq",
+  "company_input": "Recteq",
   "security_input": "Recteq"
 }
 
@@ -669,7 +673,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "HV Watterson Holdings, LLC",
+  "company_input": "HV Watterson Holdings, LLC",
   "security_input": "HV Watterson Holdings, LLC - Unfunded Revolver"
 }
 
@@ -678,7 +682,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Watchtower Buyer, LLC",
+  "company_input": "Watchtower Buyer, LLC",
   "security_input": "Watchtower Buyer, LLC - Unfunded Revolver"
 }
 
@@ -687,7 +691,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Univista Insurance",
+  "company_input": "Univista Insurance",
   "security_input": "Univista Insurance - Common Equity"
 }
 
@@ -696,7 +700,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Project Granite Buyer, Inc.",
+  "company_input": "Project Granite Buyer, Inc.",
   "security_input": "Project Granite Buyer, Inc. - Unfunded Term Loan"
 }
 
@@ -705,7 +709,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "TransGo, LLC",
+  "company_input": "TransGo, LLC",
   "security_input": "Aftermarket Drivetrain Products Holdings, LLC - Common Equity"
 }
 
@@ -714,7 +718,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "STG Distribution, LLC",
+  "company_input": "STG Distribution, LLC",
   "security_input": "STG Distribution, LLC - Second Out Term Loans"
 }
 
@@ -723,7 +727,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Rural Sourcing Holdings, Inc",
+  "company_input": "Rural Sourcing Holdings, Inc",
   "security_input": "Rural Sourcing Holdings, Inc. - Unfunded Revolver"
 }
 ### 81
@@ -731,7 +735,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Schlesinger Global, Inc.",
+  "company_input": "Schlesinger Global, Inc.",
   "security_input": "Gauge Schlesinger Coinvest, LLC - Common Equity"
 }
 
@@ -740,7 +744,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Pacific Purchaser, LLC",
+  "company_input": "Pacific Purchaser, LLC",
   "security_input": "Pacific Purchaser, LLC - Unfunded Revolver"
 }
 
@@ -749,7 +753,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Aechelon InvestCo, LP - Common Equity",
+  "company_input": "Aechelon InvestCo, LP - Common Equity",
 }
 
 ### 84
@@ -758,7 +762,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "TCG 3.0 Jogger Co-Invest, LP - Common Equity"
+  "company_input": "TCG 3.0 Jogger Co-Invest, LP - Common Equity"
   "security_input": "Aechelon InvestCo, LP - Common Equity"
 }
 
@@ -767,7 +771,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "TCG 3.0 Jogger Acquisitionco, Inc.",
+  "company_input": "TCG 3.0 Jogger Acquisitionco, Inc.",
   "security_input": "TCG 3.0 Jogger Co-Invest, LP - Common Equity"
 }
 
@@ -776,7 +780,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Knexus Holdco, LLC",
+  "company_input": "Knexus Holdco, LLC",
   "security_input": "Knexus Holdco, LLC - preferred Equity"
 }
 
@@ -785,7 +789,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Connatix Buyer, Inc.",
+  "company_input": "Connatix Buyer, Inc.",
   "security_input": "Connatix Parent, LLC - Common Equity"
 }
 
@@ -794,7 +798,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Connatix Buyer, Inc.",
+  "company_input": "Connatix Buyer, Inc.",
   "security_input": "Connatix Parent, LLC - Preferred Equity"
 }
 
@@ -803,7 +807,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "RFMG Parent, LP - Common Equity",
+  "company_input": "RFMG Parent, LP - Common Equity",
   "security_input": "RFMG Parent, LP - Common Equity"
 }
 
@@ -812,7 +816,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "project Granite Holdings",
+  "company_input": "project Granite Holdings",
   "security_input": "Project Granite Holdings, LLC - Common Equity"
 }
 
@@ -822,7 +826,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Tyto Athene, LLC",
+  "company_input": "Tyto Athene, LLC",
   "security_input": "NXOF Holdings, Inc. - Common Equity
 }
 
@@ -832,7 +836,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Tyto Athene, LLC"
+  "company_input": "Tyto Athene, LLC"
   "security_input": "NXOF Holdings, Inc. - Preferred Equity"
 }
 
@@ -842,7 +846,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "The Vertex Companies, LLC"
+  "company_input": "The Vertex Companies, LLC"
   "security_input": "TWD Parent Holdings, LLC - Common Equity"
 }
 
@@ -851,7 +855,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "The Vertex Companies, LLC",
+  "company_input": "The Vertex Companies, LLC",
   "security_input": "TWD Parent Holdings, LLC - Preferred Equity"
 }
 
@@ -860,7 +864,7 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "Watchtower Holdings, LLC - Common Equity",
+  "company_input": "Watchtower Holdings, LLC - Common Equity",
   "security_input": "Watchtower Holdings, LLC - Common Equity"
 }
 
@@ -869,6 +873,6 @@ POST http://localhost:7071/api/map-security
 Content-Type: application/json
 
 {
-  "input": "HV Watterson Holdings, LLC",
+  "company_input": "HV Watterson Holdings, LLC",
   "security_input": "HV Watterson Holdings, LLC - Common Equity"
 }

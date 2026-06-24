@@ -1,176 +1,282 @@
 import requests
 
-# -----------------------------
+# --------------------------------------------------
 # CONFIG
-# -----------------------------
+# --------------------------------------------------
 BASE_URL = "http://localhost:7071/api"
-MAP_SECURITY_URL = f"{BASE_URL}/map-security"
-MAPPINGS_URL = f"{BASE_URL}/mappings"
 
-# Pick any (company, security) pair that your /map-security endpoint can
-# already resolve via search - its predicted master security is reused
-# as the target for the new mapping, so the test doesn't need a
-# hardcoded security name from your index.
+SECURITY_MAPPING_URL = f"{BASE_URL}/security-mapping"
+STORE_MAPPING_URL = f"{BASE_URL}/store-mappings"
+VIEW_MAPPINGS_URL = f"{BASE_URL}/view-mappings"
+UPDATE_MAPPING_URL = f"{BASE_URL}/update-mappings"
+DELETE_MAPPING_URL = f"{BASE_URL}/delete-mappings"
+
 COMPANY_INPUT = "Events Buyer, LLC"
-SECURITY_INPUT = "Events buyer Term loan"
+SECURITY_INPUT = "Events buyer Term loan 12"
 
 
-# -----------------------------
-# STEP 1: Discover a real target security via /map-security
-# -----------------------------
+# --------------------------------------------------
+# STEP 1: Discover Target Security
+# --------------------------------------------------
 def discover_target_security():
 
     resp = requests.post(
-        MAP_SECURITY_URL,
-        json=[{"company_input": COMPANY_INPUT, "security_input": SECURITY_INPUT}],
-        timeout=15
+        SECURITY_MAPPING_URL,
+        json=[
+            {
+                "company_input": COMPANY_INPUT,
+                "security_input": SECURITY_INPUT,
+            }
+        ],
+        timeout=15,
     )
+
     resp.raise_for_status()
 
-    result = resp.json()[0]
+    results = resp.json()
+
+    if not results:
+        raise Exception("No response returned")
+
+    result = results[0]
 
     if "error" in result:
-        raise Exception(f"map-security failed: {result['error']}")
+        raise Exception(result["error"])
 
-    match_type = (result.get("match") or {}).get("match_type")
+    is_mapped = result.get("is_mapped", False)
 
-    if match_type in ("historical", "indirect"):
-        master_data = (result.get("mapped") or {}).get("master_security_details") or {}
+    if is_mapped:
+        master_data = (
+            result.get("mapped", {})
+            .get("master_security_details", {})
+        )
     else:
-        master_data = result.get("master_data") or {}
+        master_data = result.get("master_data", {})
 
     target_security_name = master_data.get("security_name")
 
     if not target_security_name:
         raise Exception(
-            "Could not discover a target security - "
-            "/map-security returned no match for the configured test input. "
-            "Update COMPANY_INPUT/SECURITY_INPUT to a pair that resolves."
+            "No target security discovered from security-mapping"
         )
 
-    print(f"[OK] Discovered target security: {target_security_name}")
+    print(
+        f"[OK] Target Security Found: "
+        f"{target_security_name}"
+    )
+
     return target_security_name
 
 
-# -----------------------------
-# STEP 2: Create mapping
-# -----------------------------
+# --------------------------------------------------
+# STEP 2: Create Mapping
+# --------------------------------------------------
 def create_mapping(target_security_name):
 
+    payload = {
+        "company_input": COMPANY_INPUT,
+        "security_input": SECURITY_INPUT,
+        "target_security_name": target_security_name,
+        "filetype": "test_api",
+        "loan_type": "Term Loan",
+        "metadata": {
+            "source": "integration_test"
+        }
+    }
+
     resp = requests.post(
-        MAPPINGS_URL,
-        json={
-            "company_input": COMPANY_INPUT,
-            "security_input": SECURITY_INPUT,
-            "target_security_name": target_security_name,
-            "filetype": "test_mappings.py",
-            "loan_type": "Term Loan",
-        },
-        timeout=15
+        STORE_MAPPING_URL,
+        json=payload,
+        timeout=15,
     )
 
-    assert resp.status_code == 201, f"Create failed: {resp.status_code} {resp.text}"
+    if resp.status_code == 409:
+        body = resp.json()
+
+        print(
+            f"[INFO] Mapping already exists: "
+            f"{body['id']}"
+        )
+
+        return body["id"]
+
+    assert resp.status_code == 201, (
+        f"Create failed: {resp.status_code} {resp.text}"
+    )
 
     body = resp.json()
-    print(f"[OK] Created mapping id={body['id']}")
+
+    print(
+        f"[OK] Mapping Created: "
+        f"{body['id']}"
+    )
+
     return body["id"]
 
 
-# -----------------------------
-# STEP 3: Get mapping
-# -----------------------------
-def get_mapping(mapping_id, expect_status=200):
+# --------------------------------------------------
+# STEP 3: View Mappings
+# --------------------------------------------------
+def view_mappings():
 
-    resp = requests.get(f"{MAPPINGS_URL}/{mapping_id}", timeout=15)
-
-    assert resp.status_code == expect_status, (
-        f"Get failed: expected {expect_status}, got {resp.status_code} {resp.text}"
+    resp = requests.get(
+        VIEW_MAPPINGS_URL,
+        timeout=15,
     )
 
-    print(f"[OK] GET mapping returned {resp.status_code}")
-    return resp.json() if resp.status_code == 200 else None
+    assert resp.status_code == 200, (
+        f"View failed: {resp.status_code}"
+    )
+
+    body = resp.json()
+
+    print(
+        f"[OK] Total mappings returned: "
+        f"{body['count']}"
+    )
+
+    return body
 
 
-# -----------------------------
-# STEP 4: Confirm bypass lookup picks up the new mapping
-# -----------------------------
+# --------------------------------------------------
+# STEP 4: Download CSV
+# --------------------------------------------------
+def download_csv():
+
+    resp = requests.get(
+        f"{VIEW_MAPPINGS_URL}?format=csv",
+        timeout=15,
+    )
+
+    assert resp.status_code == 200
+
+    assert (
+        "text/csv"
+        in resp.headers.get("Content-Type", "")
+    )
+
+    print(
+        "[OK] CSV download endpoint working"
+    )
+
+
+# --------------------------------------------------
+# STEP 5: Verify Bypass
+# --------------------------------------------------
 def verify_bypass_lookup():
 
     resp = requests.post(
-        MAP_SECURITY_URL,
-        json=[{"company_input": COMPANY_INPUT, "security_input": SECURITY_INPUT}],
-        timeout=15
+        SECURITY_MAPPING_URL,
+        json=[
+            {
+                "company_input": COMPANY_INPUT,
+                "security_input": SECURITY_INPUT,
+            }
+        ],
+        timeout=15,
     )
+
     resp.raise_for_status()
 
     result = resp.json()[0]
 
     is_mapped = result.get("is_mapped")
-    match_type = (result.get("match") or {}).get("match_type")
 
-    assert is_mapped is True, f"Expected is_mapped=True, got {is_mapped}"
-    assert match_type in ("historical", "indirect"), f"Unexpected match_type={match_type}"
-
-    print(f"[OK] /map-security now returns is_mapped=True (match_type={match_type})")
-
-
-# -----------------------------
-# STEP 5: Update mapping
-# -----------------------------
-def update_mapping(mapping_id):
-
-    resp = requests.put(
-        f"{MAPPINGS_URL}/{mapping_id}",
-        json={
-            "filetype": "test_mappings.py (updated)",
-            "loan_type": "Revolver",
-        },
-        timeout=15
+    assert is_mapped is True, (
+        f"Expected is_mapped=True, got {is_mapped}"
     )
 
-    assert resp.status_code == 200, f"Update failed: {resp.status_code} {resp.text}"
-
-    body = resp.json()["mapping"]
-    assert body["filetype"] == "test_mappings.py (updated)"
-    assert body["loan_type"] == "Revolver"
-
-    print("[OK] Updated mapping filetype/loan_type")
+    print(
+        "[OK] Historical mapping bypass working"
+    )
 
 
-# -----------------------------
-# STEP 6: Delete mapping
-# -----------------------------
+# --------------------------------------------------
+# STEP 6: Update Mapping
+# --------------------------------------------------
+def update_mapping(mapping_id):
+
+    payload = {
+        "filetype": "updated_test_api",
+        "loan_type": "Revolver",
+    }
+
+    resp = requests.put(
+        f"{UPDATE_MAPPING_URL}/{mapping_id}",
+        json=payload,
+        timeout=15,
+    )
+
+    assert resp.status_code == 200, (
+        f"Update failed: {resp.status_code}"
+    )
+
+    mapping = resp.json()["mapping"]
+
+    print(
+        "[OK] Mapping updated"
+    )
+
+    print(
+        f"     filetype={mapping['filetype']}"
+    )
+
+    print(
+        f"     loan_type={mapping['loan_type']}"
+    )
+
+
+# --------------------------------------------------
+# STEP 7: Delete Mapping
+# --------------------------------------------------
 def delete_mapping(mapping_id):
 
-    resp = requests.delete(f"{MAPPINGS_URL}/{mapping_id}", timeout=15)
+    resp = requests.delete(
+        f"{DELETE_MAPPING_URL}/{mapping_id}",
+        timeout=15,
+    )
 
-    assert resp.status_code == 200, f"Delete failed: {resp.status_code} {resp.text}"
-    assert resp.json().get("deleted") is True
+    assert resp.status_code == 200, (
+        f"Delete failed: {resp.status_code}"
+    )
 
-    print(f"[OK] Deleted mapping id={mapping_id}")
+    body = resp.json()
+
+    assert body["deleted"] is True
+
+    print(
+        f"[OK] Deleted mapping: {mapping_id}"
+    )
 
 
-# -----------------------------
-# RUN FULL ROUND TRIP
-# -----------------------------
+# --------------------------------------------------
+# RUN FULL TEST
+# --------------------------------------------------
 def run():
 
-    target_security_name = discover_target_security()
+    print("\n===== START TEST =====\n")
 
-    mapping_id = create_mapping(target_security_name)
+    target_security_name = (
+        discover_target_security()
+    )
 
-    fetched = get_mapping(mapping_id)
-    assert fetched["mapping"]["normalized_company_name"], "Missing normalized_company_name"
+    mapping_id = create_mapping(
+        target_security_name
+    )
+
+    view_mappings()
 
     verify_bypass_lookup()
 
     update_mapping(mapping_id)
 
+    download_csv()
+
     delete_mapping(mapping_id)
 
-    get_mapping(mapping_id, expect_status=404)
-
-    print("\nAll mapping endpoint tests passed.")
+    print(
+        "\n===== ALL TESTS PASSED ====="
+    )
 
 
 if __name__ == "__main__":

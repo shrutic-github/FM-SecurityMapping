@@ -5,6 +5,8 @@ import psycopg2
 import json
 import math
 import hashlib
+import csv
+import io
 from datetime import datetime, timezone
 from elasticsearch import Elasticsearch, NotFoundError
 from normalization import normalize_input
@@ -923,7 +925,6 @@ def _mapping_doc_id(normalized_company: str, normalized_security: str) -> str:
 def _fetch_master_security_doc(es: Elasticsearch, index_name: str, security_name: str) -> dict:
     if not security_name:
         return {}
-
     res = es.search(
         index=index_name,
         body={
@@ -971,206 +972,187 @@ def _build_mapping_doc(
     }
 
 
-@app.route(
-    route="map-security",
-    methods=["POST"]
-)
-def security_mapping_api(
-    req: func.HttpRequest
-) -> func.HttpResponse:
-
-    logging.info(
-        "Received mapping request"
-    )
-
+# ─────────────────────────────────────────────────────────────────
+# Endpoint 1: Security Retrieval  POST /api/map-security
+# ─────────────────────────────────────────────────────────────────
+@app.route(route="security-mapping", methods=["POST"])
+def security_mapping_api(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info("Received mapping request")
     try:
         body = req.get_json()
         if not isinstance(body, list):
             return func.HttpResponse(
-        json.dumps({
-            "error": "Payload must be a JSON array"
-                    }),
-        status_code=400,
-        mimetype="application/json"
-    )
+                json.dumps({"error": "Payload must be a JSON array"}),
+                status_code=400,
+                mimetype="application/json",
+            )
 
         conn_string = os.environ.get("POSTGRES_CONN")
         if not conn_string:
             raise Exception("POSTGRES_CONN not found")
 
-        # Batch mode: a bare JSON array of {input, security_input} objects.
-        if isinstance(body, list):
-            results = []
-
-            for item in body:
-                item_family_string = item.get("company_input")
-                item_security_string = item.get("security_input") or item_family_string
-                item_file_type = item.get("file_type")
-
-                if not item_family_string:
-                    results.append({"error": "Input string is required"})
-                    continue
-
-                try:
-                    results.append(
-                        _resolve_security_mapping(
-                            item_family_string,
-                            item_security_string,
-                            conn_string
-                        )
-                    )
-                except Exception as e:
-                    logging.error(f"Error mapping item ({item_family_string}): {e}")
-                    results.append({"error": str(e)})
-
-            return func.HttpResponse(
-                json.dumps(results),
-                status_code=200,
-                mimetype="application/json"
-            )
-
-
-    except Exception as e:
-
-        logging.error(
-            f"Error: {str(e)}"
-        )
+        results = []
+        for item in body:
+            company  = item.get("company_input")
+            security = item.get("security_input") or company
+            filetype = item.get("file_type")
+            if not company:
+                results.append({"error": "company_input is required"})
+                continue
+            try:
+                result = _resolve_security_mapping(company, security, conn_string)
+                if filetype:
+                    result["input"]["file_type"] = filetype
+                results.append(result)
+            except Exception as e:
+                logging.error(f"Error mapping item ({company}): {e}")
+                results.append({"error": str(e)})
 
         return func.HttpResponse(
-            json.dumps({
-                "error": str(e)
-            }),
+            json.dumps(results), status_code=200, mimetype="application/json"
+        )
 
-            status_code=500,
-            mimetype="application/json"
+    except Exception as e:
+        logging.error(f"Error: {e}")
+        return func.HttpResponse(
+            json.dumps({"error": str(e)}), status_code=500, mimetype="application/json"
         )
 
 
-# -----------------------------
-# Create / Store Reviewed Mapping
-# -----------------------------
-@app.route(
-    route="mappings",
-    methods=["POST"]
-)
-def create_mapping_api(
-    req: func.HttpRequest
-) -> func.HttpResponse:
-
+# ─────────────────────────────────────────────────────────────────
+# Endpoint 2: Store Confirmed Mapping  POST /api/mappings
+# ─────────────────────────────────────────────────────────────────
+@app.route(route="store-mappings", methods=["POST"])
+def store_mapping_api(req: func.HttpRequest) -> func.HttpResponse:
     try:
         body = req.get_json()
 
-        company_input = body.get("company_input")
-        security_input = body.get("security_input")
+        company_input        = body.get("company_input")
+        security_input       = body.get("security_input")
         target_security_name = body.get("target_security_name")
 
         if not company_input or not security_input or not target_security_name:
             return func.HttpResponse(
-                json.dumps({
-                    "error": "company_input, security_input, and target_security_name are required"
-                }),
+                json.dumps({"error": "company_input, security_input, and target_security_name are required"}),
                 status_code=400,
-                mimetype="application/json"
+                mimetype="application/json",
             )
 
         conn_string = os.environ.get("POSTGRES_CONN")
         if not conn_string:
             raise Exception("POSTGRES_CONN not found")
 
-        norm_company = normalize_input(company_input, conn_string)["normalized_query"]
+        norm_company  = normalize_input(company_input,  conn_string)["normalized_query"]
         norm_security = normalize_input(security_input, conn_string)["normalized_query"]
 
-        es = get_es_client()
+        es         = get_es_client()
         index_name = os.environ.get("ES_INDEX", "security_master_v4")
+        doc_id     = _mapping_doc_id(norm_company, norm_security)
 
-        master_doc = _fetch_master_security_doc(es, index_name, target_security_name)
+        if es.exists(index=index_name, id=doc_id):
+            existing = es.get(index=index_name, id=doc_id)["_source"]
+            return func.HttpResponse(
+                json.dumps({"error": "Mapping already exists", "id": doc_id, "existing_mapping": existing}),
+                status_code=409,
+                mimetype="application/json",
+            )
 
+        master_doc  = _fetch_master_security_doc(es, index_name, target_security_name)
         mapping_doc = _build_mapping_doc(
-            company_input,
-            security_input,
-            norm_company,
-            norm_security,
-            master_doc,
+            company_input, security_input, norm_company, norm_security, master_doc,
             filetype=body.get("filetype", ""),
             loan_type=body.get("loan_type", ""),
             metadata=body.get("metadata"),
         )
-
-        doc_id = _mapping_doc_id(norm_company, norm_security)
 
         es.index(index=index_name, id=doc_id, document=mapping_doc)
 
         return func.HttpResponse(
             json.dumps({"id": doc_id, "mapping": mapping_doc}),
             status_code=201,
-            mimetype="application/json"
+            mimetype="application/json",
         )
 
     except Exception as e:
         logging.error(f"Error creating mapping: {e}")
         return func.HttpResponse(
-            json.dumps({"error": str(e)}),
-            status_code=500,
-            mimetype="application/json"
+            json.dumps({"error": str(e)}), status_code=500, mimetype="application/json"
         )
 
 
-# -----------------------------
-# Get Stored Mapping
-# -----------------------------
-@app.route(
-    route="mappings/{id}",
-    methods=["GET"]
-)
-def get_mapping_api(
-    req: func.HttpRequest
-) -> func.HttpResponse:
-
-    doc_id = req.route_params.get("id")
-
+# ─────────────────────────────────────────────────────────────────
+# Endpoint 3: List / Download All Mappings  GET /api/mappings
+#   ?page=1&limit=100   → paginated JSON list
+#   ?format=csv         → CSV file download
+# ─────────────────────────────────────────────────────────────────
+@app.route(route="view-mappings", methods=["GET"])
+def view_mappings_api(req: func.HttpRequest) -> func.HttpResponse:
     try:
-        es = get_es_client()
+        es         = get_es_client()
         index_name = os.environ.get("ES_INDEX", "security_master_v4")
 
-        try:
-            res = es.get(index=index_name, id=doc_id)
-        except NotFoundError:
+        page  = int(req.params.get("page",  "1"))
+        limit = min(int(req.params.get("limit", "100")), 1000)
+        fmt   = req.params.get("format", "json").lower()
+
+        res = es.search(
+            index=index_name,
+            body={
+                "from": (page - 1) * limit,
+                "size": limit,
+                "query": {"term": {"is_alias": True}},
+                "sort": [{"ingested_at": {"order": "desc"}}],
+                "_source": [
+                    "company_name", "security_name",
+                    "master_family_name", "master_security_name",
+                    "master_security_type", "filetype", "loan_type",
+                    "ingested_at",
+                ],
+            },
+        )
+
+        total = res.get("hits", {}).get("total", {}).get("value", 0)
+        hits  = res.get("hits", {}).get("hits", [])
+        rows  = [{"id": h["_id"], **h["_source"]} for h in hits]
+
+        if fmt == "csv":
+            if not rows:
+                csv_body = ""
+            else:
+                buf    = io.StringIO()
+                writer = csv.DictWriter(buf, fieldnames=rows[0].keys())
+                writer.writeheader()
+                writer.writerows(rows)
+                csv_body = buf.getvalue()
+
             return func.HttpResponse(
-                json.dumps({"error": "Mapping not found"}),
-                status_code=404,
-                mimetype="application/json"
+                csv_body,
+                status_code=200,
+                mimetype="text/csv",
+                headers={"Content-Disposition": "attachment; filename=mappings.csv"},
             )
 
         return func.HttpResponse(
-            json.dumps({"id": doc_id, "mapping": res["_source"]}),
+            json.dumps({"page": page, "limit": limit, "total": total, "count": len(rows), "results": rows}),
             status_code=200,
-            mimetype="application/json"
+            mimetype="application/json",
         )
 
     except Exception as e:
-        logging.error(f"Error fetching mapping {doc_id}: {e}")
+        logging.error(f"Error listing mappings: {e}")
         return func.HttpResponse(
-            json.dumps({"error": str(e)}),
-            status_code=500,
-            mimetype="application/json"
+            json.dumps({"error": str(e)}), status_code=500, mimetype="application/json"
         )
 
 
-# -----------------------------
-# Update Stored Mapping
-# -----------------------------
-@app.route(
-    route="mappings/{id}",
-    methods=["PUT"]
-)
-def update_mapping_api(
-    req: func.HttpRequest
-) -> func.HttpResponse:
-
+# ─────────────────────────────────────────────────────────────────
+# Endpoint 4: Update Mapping  PUT /api/mappings/{id}
+# ─────────────────────────────────────────────────────────────────
+@app.route(route="update-mappings/{id}", methods=["PUT"])
+def update_mapping_api(req: func.HttpRequest) -> func.HttpResponse:
     doc_id = req.route_params.get("id")
-
     try:
-        es = get_es_client()
+        es         = get_es_client()
         index_name = os.environ.get("ES_INDEX", "security_master_v4")
 
         try:
@@ -1179,11 +1161,10 @@ def update_mapping_api(
             return func.HttpResponse(
                 json.dumps({"error": "Mapping not found"}),
                 status_code=404,
-                mimetype="application/json"
+                mimetype="application/json",
             )
 
-        body = req.get_json()
-
+        body                 = req.get_json()
         target_security_name = body.get("target_security_name")
         master_doc = (
             _fetch_master_security_doc(es, index_name, target_security_name)
@@ -1197,9 +1178,9 @@ def update_mapping_api(
             existing.get("normalized_company_name", ""),
             existing.get("normalized_security_name", ""),
             master_doc,
-            filetype=body.get("filetype", existing.get("filetype", "")),
+            filetype=body.get("filetype",  existing.get("filetype",  "")),
             loan_type=body.get("loan_type", existing.get("loan_type", "")),
-            metadata=body.get("metadata", existing.get("metadata", {})),
+            metadata=body.get("metadata",   existing.get("metadata",  {})),
         )
 
         es.index(index=index_name, id=doc_id, document=mapping_doc)
@@ -1207,33 +1188,24 @@ def update_mapping_api(
         return func.HttpResponse(
             json.dumps({"id": doc_id, "mapping": mapping_doc}),
             status_code=200,
-            mimetype="application/json"
+            mimetype="application/json",
         )
 
     except Exception as e:
         logging.error(f"Error updating mapping {doc_id}: {e}")
         return func.HttpResponse(
-            json.dumps({"error": str(e)}),
-            status_code=500,
-            mimetype="application/json"
+            json.dumps({"error": str(e)}), status_code=500, mimetype="application/json"
         )
 
 
-# -----------------------------
-# Delete Stored Mapping
-# -----------------------------
-@app.route(
-    route="mappings/{id}",
-    methods=["DELETE"]
-)
-def delete_mapping_api(
-    req: func.HttpRequest
-) -> func.HttpResponse:
-
+# ─────────────────────────────────────────────────────────────────
+# Endpoint 5: Delete Mapping  DELETE /api/mappings/{id}
+# ─────────────────────────────────────────────────────────────────
+@app.route(route="delete-mappings/{id}", methods=["DELETE"])
+def delete_mapping_api(req: func.HttpRequest) -> func.HttpResponse:
     doc_id = req.route_params.get("id")
-
     try:
-        es = get_es_client()
+        es         = get_es_client()
         index_name = os.environ.get("ES_INDEX", "security_master_v4")
 
         try:
@@ -1242,19 +1214,17 @@ def delete_mapping_api(
             return func.HttpResponse(
                 json.dumps({"error": "Mapping not found"}),
                 status_code=404,
-                mimetype="application/json"
+                mimetype="application/json",
             )
 
         return func.HttpResponse(
             json.dumps({"deleted": True, "id": doc_id}),
             status_code=200,
-            mimetype="application/json"
+            mimetype="application/json",
         )
 
     except Exception as e:
         logging.error(f"Error deleting mapping {doc_id}: {e}")
         return func.HttpResponse(
-            json.dumps({"error": str(e)}),
-            status_code=500,
-            mimetype="application/json"
+            json.dumps({"error": str(e)}), status_code=500, mimetype="application/json"
         )

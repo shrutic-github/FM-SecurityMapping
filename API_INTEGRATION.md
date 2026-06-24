@@ -1,18 +1,18 @@
 # Security Mapping API — Integration Guide
 
-This document covers everything needed to call the `map-security` endpoint from an external system.
+> Structured for conversion to OpenAPI / Apidog format.
 
 ---
 
 ## Overview
 
-The Security Mapping API resolves raw portfolio input strings (company name + security description) to standardized master securities stored in Elasticsearch. It handles typos, abbreviations (e.g. `T/L` → `term loan`), alias/rename chains, and fuzzy name variants.
+The Security Mapping API resolves raw portfolio input strings (company name + security description) to standardized master securities stored in Elasticsearch. It handles abbreviations (e.g. `T/L` → `term loan`), alias/rename chains, and fuzzy name variants.
 
 ---
 
 ## Base URL
 
-| Environment | URL |
+| Environment | Base URL |
 |---|---|
 | Local development | `http://localhost:7071/api` |
 | Azure (deployed) | `https://<function-app-name>.azurewebsites.net/api` |
@@ -21,351 +21,573 @@ The Security Mapping API resolves raw portfolio input strings (company name + se
 
 ## Authentication
 
-Azure Function Apps support function-level API keys. Include the key in the request header or query string:
+Azure Function Apps support function-level keys.
 
+**Header (recommended)**
 ```
 x-functions-key: <your-function-key>
 ```
 
-or as a query parameter:
-
+**Query string**
 ```
-POST /api/map-security?code=<your-function-key>
+?code=<your-function-key>
 ```
 
-For local development, no key is required.
+Local development requires no key.
 
 ---
 
-## Endpoint
+## Endpoints Summary
 
-### `POST /api/map-security`
+| # | Method | Route | Purpose |
+|---|---|---|---|
+| 1 | `POST` | `/api/security-mapping` | Resolve input strings to matching securities |
+| 2 | `POST` | `/api/store-mappings` | Store a user-confirmed mapping |
+| 3 | `GET` | `/api/view-mappings` | List all stored mappings / download as CSV |
+| 4 | `PUT` | `/api/update-mappings/{id}` | Update a stored mapping |
+| 5 | `DELETE` | `/api/delete-mappings/{id}` | Delete a stored mapping |
 
-Maps one or more (company, security) pairs to master securities.
+---
+
+## Endpoint 1 — Security Retrieval
+
+### `POST /api/security-mapping`
+
+Resolves one or more (company, security) input pairs to their best matching master securities. Always accepts a **JSON array** even for a single item.
 
 **Headers**
-
 ```
 Content-Type: application/json
-x-functions-key: <key>          # required on deployed instances
+x-functions-key: <key>
 ```
 
----
+### Request Body
 
-## Request Schema
-
-### Single item
-
-```json
-{
-  "input": "Events Buyer, LLC",
-  "security_input": "Events buyer Term loan"
-}
-```
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `input` | string | Yes | Raw company / issuer name |
-| `security_input` | string | No | Raw security description. Defaults to `input` if omitted. |
-
-### Batch (array of items)
-
-Send a JSON array to resolve multiple pairs in one call:
+Array of objects:
 
 ```json
 [
   {
-    "input": "Events Buyer, LLC",
-    "security_input": "Events buyer Term loan"
+    "company_input": "Events Buyer, LLC",
+    "security_input": "Events buyer Term loan",
+    "file_type": "us_bank_cashfile"
   },
   {
-    "input": "AFC-Dell Holding Corp.",
+    "company_input": "AFC-Dell Holding Corp.",
     "security_input": "AFC-Dell Holding DD T/L (12/23)"
   }
 ]
 ```
 
-The response is a JSON array with results in the same order as the request. Items that fail individually return `{"error": "<message>"}` without failing the whole batch.
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `company_input` | string | Yes | Raw company / issuer name |
+| `security_input` | string | No | Raw security description. Defaults to `company_input` if omitted. |
+| `file_type` | string | No | Source file type label (e.g. `"us_bank_cashfile"`, `"trade_blotter"`). Echoed back in the response `input` block. Pass this as `filetype` when calling `POST /api/store-mappings`. |
 
----
+### Response — `200 OK`
 
-## Response Schema
+Array of result objects in the same order as the request. A failed individual item returns `{"error": "<message>"}` without failing the whole batch.
 
-The response shape differs slightly depending on how the match was resolved. There are two top-level shapes: **mapped match** (alias/historical lookup) and **search match** (Elasticsearch retrieval).
+**Shape A — Search match** (`is_mapped: false`)
 
-### Common fields (always present)
-
-```json
-{
-  "input": {
-    "company_input": "Events Buyer, LLC",
-    "security_input": "Events buyer Term loan",
-    "company_query": "events buyer",
-    "security_query": "events buyer term loan"
-  },
-  "is_mapped": false,
-  "match": {
-    "top_security": "Events Buyer, LLC Initial Term Loan",
-    "family_confidence": 0.582,
-    "security_confidence": 0.374,
-    "matched": true,
-    "match_type": "direct"
-  }
-}
-```
-
-| Field | Type | Description |
-|---|---|---|
-| `input.company_input` | string | Original company string as sent |
-| `input.security_input` | string | Original security string as sent |
-| `input.company_query` | string | Normalized form used for search |
-| `input.security_query` | string | Normalized form used for search |
-| `is_mapped` | bool | `true` if resolved via a pre-stored alias/mapping record |
-| `match.top_security` | string | Best matching security name |
-| `match.family_confidence` | float 0–1 | Confidence in the company/family match |
-| `match.security_confidence` | float 0–1 | Confidence in the security match |
-| `match.matched` | bool | `true` if a security was found |
-| `match.match_type` | string | See [Match Types](#match-types) below |
-
----
-
-### Shape A — Search match (`is_mapped: false`)
-
-Returned when the match is resolved through Elasticsearch retrieval (no pre-stored alias record exists).
+Returned when the match is resolved through Elasticsearch fuzzy/phrase search.
 
 ```json
-{
-  "input": { ... },
-  "is_mapped": false,
-  "match": {
-    "top_security": "Events Buyer, LLC Initial Term Loan",
-    "family_confidence": 0.582,
-    "security_confidence": 0.374,
-    "matched": true,
-    "match_type": "direct"
-  },
-  "master_data": {
-    "family_name": "Events Buyer, LLC",
-    "normalized_family_name": "events buyer",
-    "soi_name": "Events Buyer",
-    "security_name": "Events Buyer, LLC Initial Term Loan",
-    "normalized_security_name": "events buyer initial term loan",
-    "security_type": "Term Loan"
-  },
-  "candidates": {
-    "top_families": [
-      { "family_name": "Events Buyer, LLC" }
-    ],
-    "ranked_securities": [
-      {
-        "security_name": "Events Buyer, LLC Initial Term Loan",
-        "security_type": "Term Loan",
-        "normalized_soi_name": "events buyer",
-        "normalized_security_name": "events buyer initial term loan",
-        "normalized_family_name": "events buyer",
-        "score": 55.0
-      }
-    ]
-  }
-}
-```
-
-| Field | Description |
-|---|---|
-| `master_data` | The resolved master security record. `null` when `matched: false`. |
-| `candidates.top_families` | Up to 5 candidate families considered (ordered by score) |
-| `candidates.ranked_securities` | All securities evaluated within the candidate families |
-
----
-
-### Shape B — Mapped match (`is_mapped: true`)
-
-Returned when the input pair resolves directly to a pre-stored alias record (historical rename, indirect name, or manually mapped entry).
-
-```json
-{
-  "input": { ... },
-  "is_mapped": true,
-  "mapped": {
-    "mapped_family": "Events Buyer, LLC",
-    "mapped_security": "Events Buyer, LLC Initial Term Loan",
-    "filetype": "portfolio_upload",
-    "mapped_at": "2024-11-15T10:30:00Z",
-    "master_security_details": {
+[
+  {
+    "input": {
+      "company_input": "Events Buyer, LLC",
+      "security_input": "Events buyer Term loan",
+      "company_query": "events buyer",
+      "security_query": "events buyer term loan",
+      "file_type": "us_bank_cashfile"
+    },
+    "is_mapped": false,
+    "match": {
+      "top_security": "Events Buyer, LLC Initial Term Loan",
+      "family_confidence": 0.582,
+      "security_confidence": 0.374,
+      "matched": true,
+      "match_type": "direct"
+    },
+    "master_data": {
       "family_name": "Events Buyer, LLC",
       "normalized_family_name": "events buyer",
       "soi_name": "Events Buyer",
       "security_name": "Events Buyer, LLC Initial Term Loan",
       "normalized_security_name": "events buyer initial term loan",
       "security_type": "Term Loan"
+    },
+    "candidates": {
+      "top_families": [
+        { "family_name": "Events Buyer, LLC" }
+      ],
+      "ranked_securities": [
+        {
+          "security_name": "Events Buyer, LLC Initial Term Loan",
+          "security_type": "Term Loan",
+          "normalized_soi_name": "events buyer",
+          "normalized_security_name": "events buyer initial term loan",
+          "normalized_family_name": "events buyer",
+          "score": 55.0
+        }
+      ]
     }
-  },
-  "match": {
-    "top_security": "Events Buyer, LLC Initial Term Loan",
-    "family_confidence": 1.0,
-    "security_confidence": 1.0,
-    "matched": true,
-    "match_type": "historical"
+  }
+]
+```
+
+**Shape B — Mapped match** (`is_mapped: true`)
+
+Returned when the input pair resolves directly to a pre-stored alias record (user-confirmed or historical mapping). Confidence is always `1.0`.
+
+```json
+[
+  {
+    "input": {
+      "company_input": "Events Buyer, LLC",
+      "security_input": "Events buyer Term loan",
+      "company_query": "events buyer",
+      "security_query": "events buyer term loan",
+      "file_type": "us_bank_cashfile"
+    },
+    "is_mapped": true,
+    "mapped": {
+      "mapped_family": "Events Buyer, LLC",
+      "mapped_security": "Events Buyer, LLC Initial Term Loan",
+      "filetype": "us_bank_cashfile",
+      "mapped_at": "2024-11-15T10:30:00+00:00",
+      "master_security_details": {
+        "family_name": "Events Buyer, LLC",
+        "normalized_family_name": "events buyer",
+        "soi_name": "Events Buyer",
+        "security_name": "Events Buyer, LLC Initial Term Loan",
+        "normalized_security_name": "events buyer initial term loan",
+        "security_type": "Term Loan"
+      }
+    },
+    "match": {
+      "top_security": "Events Buyer, LLC Initial Term Loan",
+      "family_confidence": 1.0,
+      "security_confidence": 1.0,
+      "matched": true,
+      "match_type": "historical"
+    }
+  }
+]
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `input.company_input` | string | Original company string as sent |
+| `input.security_input` | string | Original security string as sent |
+| `input.company_query` | string | Normalized form used for ES search |
+| `input.security_query` | string | Normalized form used for ES search |
+| `input.file_type` | string | Echoed from the request item. Only present if `file_type` was supplied. Pass as `filetype` when calling `POST /api/store-mappings`. |
+| `is_mapped` | boolean | `true` if hit came from a pre-stored alias record |
+| `match.top_security` | string | Best matching security name |
+| `match.family_confidence` | float 0–1 | Confidence in the company/family match |
+| `match.security_confidence` | float 0–1 | Confidence in the security match |
+| `match.matched` | boolean | `true` if a security was found |
+| `match.match_type` | string | `historical` \| `indirect` \| `direct` \| `unmatched` |
+| `master_data` | object \| null | Resolved master record. Present only when `is_mapped: false`. `null` when unmatched. |
+| `mapped` | object | Present only when `is_mapped: true`. Contains alias record details. |
+| `candidates.top_families` | array | Up to 5 candidate families considered |
+| `candidates.ranked_securities` | array | All securities evaluated within candidate families |
+
+### Match Types
+
+| `match_type` | `is_mapped` | Description |
+|---|---|---|
+| `historical` | `true` | Exact match on a stored alias — normalized security name matches exactly |
+| `indirect` | `true` | Stored alias matched but normalized security name differs (e.g. renamed security) |
+| `direct` | `false` | Resolved through Elasticsearch fuzzy/phrase search |
+| `unmatched` | `false` | No security found; `matched: false` |
+
+### Confidence Score Guidance
+
+Scores are logarithmically scaled from raw Elasticsearch scores: `scaled = log(1 + raw) / log(1 + 600)`.
+
+| Condition | Recommended action |
+|---|---|
+| `match_type` is `historical` or `indirect` | Accept — pre-confirmed, confidence = 1.0 |
+| `direct` AND both confidences ≥ 0.4 | Accept |
+| `direct` AND either confidence < 0.4 | Route to human review |
+| `unmatched` | Escalate / manual lookup |
+
+### Error Responses
+
+| Status | Body | Cause |
+|---|---|---|
+| `400` | `{"error": "Payload must be a JSON array"}` | Request body is not an array |
+| `500` | `{"error": "<message>"}` | ES or Postgres connection failure |
+
+---
+
+## Endpoint 2 — Store Confirmed Mapping
+
+### `POST /api/store-mappings`
+
+Stores a user-confirmed (company, security) → master security mapping in Elasticsearch. Future calls to `/api/security-mapping` with the same input will resolve instantly via the alias bypass without a full ES search.
+
+**Headers**
+```
+Content-Type: application/json
+x-functions-key: <key>
+```
+
+### Request Body
+
+```json
+{
+  "company_input": "Events Buyer, LLC",
+  "security_input": "Events buyer Term loan",
+  "target_security_name": "Events Buyer, LLC Initial Term Loan",
+  "filetype": "us_bank_cashfile",
+  "loan_type": "Term Loan",
+  "metadata": {}
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `company_input` | string | Yes | Raw company name as it appears in the source system |
+| `security_input` | string | Yes | Raw security name as it appears in the source system |
+| `target_security_name` | string | Yes | Exact master security name to map to (use `match.top_security` from retrieval response) |
+| `filetype` | string | No | Source file type label (e.g. `"us_bank_cashfile"`). Use the value from `input.file_type` in the retrieval response. Note the field is named `file_type` in Endpoint 1 input / response, but `filetype` here and in stored ES documents. |
+| `loan_type` | string | No | Loan/security type override. Defaults to master record's `security_type`. |
+| `metadata` | object | No | Arbitrary key-value metadata to attach to the mapping record |
+
+### Response — `201 Created`
+
+```json
+{
+  "id": "a3f2c1d4e5b6...",
+  "mapping": {
+    "is_alias": true,
+    "company_name": "Events Buyer, LLC",
+    "normalized_company_name": "events buyer",
+    "security_name": "Events buyer Term loan",
+    "normalized_security_name": "events buyer term loan",
+    "filetype": "us_bank_cashfile",
+    "loan_type": "Term Loan",
+    "master_family_name": "Events Buyer, LLC",
+    "master_normalized_family_name": "events buyer",
+    "master_security_name": "Events Buyer, LLC Initial Term Loan",
+    "master_normalized_security_name": "events buyer initial term loan",
+    "master_soi_name": "Events Buyer",
+    "master_security_type": "Term Loan",
+    "master_security_details": { },
+    "metadata": {},
+    "ingested_at": "2024-11-15T10:30:00+00:00"
   }
 }
 ```
 
 | Field | Description |
 |---|---|
-| `mapped.mapped_family` | Master family name from the alias record |
-| `mapped.mapped_security` | Master security name from the alias record |
-| `mapped.filetype` | Source file type that created the alias record |
-| `mapped.mapped_at` | ISO timestamp when the alias was ingested |
-| `mapped.master_security_details` | Full master record fields |
+| `id` | SHA-256 hash of `normalized_company\|normalized_security`. Use this for GET / PUT / DELETE calls. |
+| `mapping` | Full alias document written to Elasticsearch |
 
----
+### Error Responses
 
-## Match Types
-
-| `match_type` | `is_mapped` | Description |
+| Status | Body | Cause |
 |---|---|---|
-| `historical` | `true` | Exact match against a stored alias — same normalized security name |
-| `indirect` | `true` | Stored alias matched but normalized security name differs (e.g. renamed security) |
-| `direct` | `false` | Resolved through Elasticsearch fuzzy/phrase search |
-| `unmatched` | `false` | No security found; `matched: false` |
+| `400` | `{"error": "company_input, security_input, and target_security_name are required"}` | Missing required field |
+| `409` | `{"error": "Mapping already exists", "id": "...", "existing_mapping": {...}}` | A mapping for this normalized pair already exists |
+| `500` | `{"error": "<message>"}` | ES or Postgres connection failure |
 
 ---
 
-## Confidence Scores
+## Endpoint 3 — List / Download All Mappings
 
-Both `family_confidence` and `security_confidence` are floats in `[0.0, 1.0]`.
+### `GET /api/view-mappings`
 
-- Scores are derived from raw Elasticsearch scores via logarithmic scaling:  
-  `scaled = log(1 + raw_score) / log(1 + cap)` where `cap` defaults to `600`.
-- `1.0` means the match came from a pre-stored alias record (certain).
-- For search-based matches, a practical threshold for "high confidence" is **≥ 0.4** on both fields.
+Returns all stored (alias) mapping records from Elasticsearch. Supports pagination and CSV download.
 
-**Suggested decision logic:**
+**Headers**
+```
+x-functions-key: <key>
+```
+
+### Query Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `page` | integer | `1` | Page number (1-based) |
+| `limit` | integer | `100` | Results per page. Maximum `1000`. |
+| `format` | string | `json` | `json` for paginated JSON response; `csv` to download as a CSV file |
+
+### Response — `200 OK` (JSON)
+
+```json
+{
+  "page": 1,
+  "limit": 100,
+  "total": 342,
+  "count": 100,
+  "results": [
+    {
+      "id": "a3f2c1d4e5b6...",
+      "company_name": "Events Buyer, LLC",
+      "security_name": "Events buyer Term loan",
+      "master_family_name": "Events Buyer, LLC",
+      "master_security_name": "Events Buyer, LLC Initial Term Loan",
+      "master_security_type": "Term Loan",
+      "filetype": "us_bank_cashfile",
+      "loan_type": "Term Loan",
+      "ingested_at": "2024-11-15T10:30:00+00:00"
+    }
+  ]
+}
+```
+
+| Field | Description |
+|---|---|
+| `total` | Total number of stored mappings in the index |
+| `count` | Number of results in this page |
+| `results` | Array of mapping records |
+
+### Response — `200 OK` (CSV, `?format=csv`)
+
+Returns a `text/csv` file attachment named `mappings.csv`.
 
 ```
-match_type == "historical" or "indirect"  →  accept (is_mapped = true, confidence 1.0)
-match_type == "direct" AND family_confidence >= 0.4 AND security_confidence >= 0.4  →  accept
-match_type == "direct" AND (family_confidence < 0.4 OR security_confidence < 0.4)   →  review
-match_type == "unmatched"  →  escalate / manual review
+Content-Type: text/csv
+Content-Disposition: attachment; filename=mappings.csv
 ```
+
+Columns match the JSON result fields: `id`, `company_name`, `security_name`, `master_family_name`, `master_security_name`, `master_security_type`, `filetype`, `loan_type`, `ingested_at`.
+
+### Error Responses
+
+| Status | Body | Cause |
+|---|---|---|
+| `500` | `{"error": "<message>"}` | ES connection failure |
+
+---
+
+## Endpoint 4 — Update Mapping
+
+### `PUT /api/update-mappings/{id}`
+
+Updates an existing mapping record. Use this to re-point a stored mapping to a different master security or update metadata. The `id` is returned by `POST /api/store-mappings`.
+
+**Headers**
+```
+Content-Type: application/json
+x-functions-key: <key>
+```
+
+### Path Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | string | SHA-256 mapping ID returned by the store endpoint |
+
+### Request Body
+
+All fields are optional. Omitted fields retain their existing values.
+
+```json
+{
+  "target_security_name": "Events Buyer, LLC Amended Term Loan",
+  "filetype": "manual_review",
+  "loan_type": "Term Loan",
+  "metadata": { "reviewed_by": "analyst_1" }
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `target_security_name` | string | No | New master security to point to. If omitted, existing master details are kept. |
+| `filetype` | string | No | Updated file type label |
+| `loan_type` | string | No | Updated loan type |
+| `metadata` | object | No | Replaces existing metadata entirely |
+
+### Response — `200 OK`
+
+```json
+{
+  "id": "a3f2c1d4e5b6...",
+  "mapping": {
+    "company_name": "Events Buyer, LLC",
+    "security_name": "Events buyer Term loan",
+    "master_security_name": "Events Buyer, LLC Amended Term Loan",
+    "ingested_at": "2024-11-16T08:00:00+00:00"
+  }
+}
+```
+
+### Error Responses
+
+| Status | Body | Cause |
+|---|---|---|
+| `404` | `{"error": "Mapping not found"}` | No document with that ID exists |
+| `500` | `{"error": "<message>"}` | ES connection failure |
+
+---
+
+## Endpoint 5 — Delete Mapping
+
+### `DELETE /api/delete-mappings/{id}`
+
+Permanently removes a stored mapping from Elasticsearch. After deletion, future retrieval calls for the same input will fall back to the full ES search.
+
+**Headers**
+```
+x-functions-key: <key>
+```
+
+### Path Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | string | SHA-256 mapping ID returned by the store endpoint |
+
+### Response — `200 OK`
+
+```json
+{
+  "deleted": true,
+  "id": "a3f2c1d4e5b6..."
+}
+```
+
+### Error Responses
+
+| Status | Body | Cause |
+|---|---|---|
+| `404` | `{"error": "Mapping not found"}` | No document with that ID exists |
+| `500` | `{"error": "<message>"}` | ES connection failure |
 
 ---
 
 ## Code Examples
 
-### Python
+### Python — Full workflow
 
 ```python
 import requests
 
 BASE_URL = "https://<function-app-name>.azurewebsites.net/api"
-API_KEY  = "<your-function-key>"
+HEADERS  = {"x-functions-key": "<key>", "Content-Type": "application/json"}
 
-# Single item
-response = requests.post(
-    f"{BASE_URL}/map-security",
-    headers={"x-functions-key": API_KEY, "Content-Type": "application/json"},
-    json={
-        "input": "Events Buyer, LLC",
-        "security_input": "Events buyer Term loan"
-    }
+# 1. Retrieve matching securities (pass file_type per item if available)
+res = requests.post(
+    f"{BASE_URL}/security-mapping",
+    headers=HEADERS,
+    json=[
+        {
+            "company_input":  "Events Buyer, LLC",
+            "security_input": "Events buyer Term loan",
+            "file_type":      "us_bank_cashfile",   # optional; echoed back in response
+        }
+    ]
 )
-result = response.json()
+result = res.json()[0]
 print(result["match"]["match_type"], result["match"]["top_security"])
 
-# Batch
-items = [
-    {"input": "Events Buyer, LLC",     "security_input": "Events buyer Term loan"},
-    {"input": "AFC-Dell Holding Corp.", "security_input": "AFC-Dell Holding DD T/L (12/23)"},
-]
-batch_response = requests.post(
-    f"{BASE_URL}/map-security",
-    headers={"x-functions-key": API_KEY, "Content-Type": "application/json"},
-    json=items
+# 2. User accepts the match — store it
+# file_type from Endpoint 1 becomes filetype in Endpoint 2
+store_res = requests.post(
+    f"{BASE_URL}/store-mappings",
+    headers=HEADERS,
+    json={
+        "company_input":        result["input"]["company_input"],
+        "security_input":       result["input"]["security_input"],
+        "target_security_name": result["match"]["top_security"],
+        "filetype":             result["input"].get("file_type", ""),
+    }
 )
-for item in batch_response.json():
-    if "error" in item:
-        print("ERROR:", item["error"])
-    else:
-        print(item["match"]["match_type"], item["match"]["top_security"])
-```
+mapping_id = store_res.json()["id"]   # use this for update / delete
 
-### JavaScript / Node.js
+# 3. List all mappings (JSON)
+view_res = requests.get(f"{BASE_URL}/view-mappings", headers=HEADERS, params={"page": 1, "limit": 50})
+print(view_res.json()["total"], "total mappings")
 
-```js
-const BASE_URL = "https://<function-app-name>.azurewebsites.net/api";
-const API_KEY  = "<your-function-key>";
+# 4. Download as CSV
+csv_res = requests.get(f"{BASE_URL}/view-mappings", headers=HEADERS, params={"format": "csv"})
+with open("mappings.csv", "w") as f:
+    f.write(csv_res.text)
 
-async function mapSecurity(companyInput, securityInput) {
-  const res = await fetch(`${BASE_URL}/map-security`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-functions-key": API_KEY,
-    },
-    body: JSON.stringify({ input: companyInput, security_input: securityInput }),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
+# 5. Update a mapping
+requests.put(
+    f"{BASE_URL}/update-mappings/{mapping_id}",
+    headers=HEADERS,
+    json={"target_security_name": "Events Buyer, LLC Amended Term Loan"}
+)
 
-// Batch
-async function mapSecuritiesBatch(items) {
-  const res = await fetch(`${BASE_URL}/map-security`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-functions-key": API_KEY },
-    body: JSON.stringify(items),
-  });
-  return res.json();
-}
+# 6. Delete a mapping
+requests.delete(f"{BASE_URL}/delete-mappings/{mapping_id}", headers=HEADERS)
 ```
 
 ### cURL
 
 ```bash
-# Single item
-curl -X POST "https://<function-app-name>.azurewebsites.net/api/map-security" \
-  -H "Content-Type: application/json" \
-  -H "x-functions-key: <your-function-key>" \
-  -d '{"input": "Events Buyer, LLC", "security_input": "Events buyer Term loan"}'
+BASE="https://<function-app-name>.azurewebsites.net/api"
+KEY="<your-function-key>"
 
-# Batch
-curl -X POST "https://<function-app-name>.azurewebsites.net/api/map-security" \
+# 1. Retrieve (file_type is optional per item)
+curl -X POST "$BASE/security-mapping" \
   -H "Content-Type: application/json" \
-  -H "x-functions-key: <your-function-key>" \
-  -d '[
-    {"input": "Events Buyer, LLC", "security_input": "Events buyer Term loan"},
-    {"input": "AFC-Dell Holding Corp.", "security_input": "AFC-Dell Holding DD T/L"}
-  ]'
+  -H "x-functions-key: $KEY" \
+  -d '[{"company_input": "Events Buyer, LLC", "security_input": "Events buyer Term loan", "file_type": "us_bank_cashfile"}]'
+
+# 2. Store confirmed mapping
+curl -X POST "$BASE/store-mappings" \
+  -H "Content-Type: application/json" \
+  -H "x-functions-key: $KEY" \
+  -d '{
+    "company_input": "Events Buyer, LLC",
+    "security_input": "Events buyer Term loan",
+    "target_security_name": "Events Buyer, LLC Initial Term Loan"
+  }'
+
+# 3. List mappings
+curl "$BASE/view-mappings?page=1&limit=50" -H "x-functions-key: $KEY"
+
+# 4. Download CSV
+curl "$BASE/view-mappings?format=csv" -H "x-functions-key: $KEY" -o mappings.csv
+
+# 5. Update
+curl -X PUT "$BASE/update-mappings/<id>" \
+  -H "Content-Type: application/json" \
+  -H "x-functions-key: $KEY" \
+  -d '{"target_security_name": "Events Buyer, LLC Amended Term Loan"}'
+
+# 6. Delete
+curl -X DELETE "$BASE/delete-mappings/<id>" -H "x-functions-key: $KEY"
 ```
 
 ---
 
-## Error Handling
+## Global Error Reference
 
-| HTTP Status | Meaning |
+| Status | Meaning |
 |---|---|
-| `200` | Success — check `match.matched` and `match.match_type` for result quality |
-| `400` | Bad request — `input` field missing |
-| `500` | Server error — Elasticsearch or PostgreSQL connection failure |
-
-In batch mode the outer response is always `200`. Individual failed items carry an `"error"` key:
-
-```json
-[
-  { "match": { ... } },
-  { "error": "Input string is required" }
-]
-```
-
-Always check for the `"error"` key per item when processing batch results.
+| `200` | Success |
+| `201` | Resource created |
+| `400` | Bad request — missing or invalid fields |
+| `404` | Resource not found |
+| `409` | Conflict — duplicate mapping |
+| `500` | Server error — check ES / Postgres connectivity |
 
 ---
 
-## Tips for Integration
+## Notes for OpenAPI Conversion
 
-- **Abbreviations are handled automatically.** Send raw strings as they appear in source files (e.g. `T/L`, `DD T/L`, `R/C`). The API expands them before matching.
-- **Legal suffixes can be included or omitted.** `Inc`, `LLC`, `Corp`, etc. are stripped during normalization.
-- **Use batch mode for bulk processing.** A single batch call is more efficient than sequential single calls. There is no documented hard limit on batch size, but keep batches under 500 items per call for stable latency.
-- **Cache `historical`/`indirect` results.** A `match_type` of `historical` or `indirect` means the exact input pair is stored in the alias index. These results are stable and can be cached without re-querying.
-- **Log `company_query` and `security_query`** from the response `input` block for debugging — these are the normalized strings actually used for search.
+When importing this document into Apidog / Swagger:
+
+- **Server**: set `url` to the Base URL table above (use variables for environment).
+- **Security scheme**: `apiKey` in header, name `x-functions-key`.
+- **`id` path parameter**: type `string`, format `hex`, description "SHA-256 of normalized_company|normalized_security".
+- **Endpoint 1 request**: schema type `array`, items are the per-item object schema.
+- **Endpoint 1 response**: schema type `array`, items use `oneOf` with Shape A and Shape B discriminated by `is_mapped`.
+- **Endpoint 3 `format=csv`**: model as a separate response with `content: text/csv`.
+- **`match_type` enum**: `["historical", "indirect", "direct", "unmatched"]`.
+- **`family_confidence` / `security_confidence`**: type `number`, format `float`, minimum `0`, maximum `1`.
+- **`file_type` vs `filetype`**: Endpoint 1 request and response use `file_type` (underscore). Endpoint 2 request, Endpoint 4 request, and all stored ES documents use `filetype` (no underscore). Model them as separate properties in OpenAPI with a description cross-referencing each other.

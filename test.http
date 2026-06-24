@@ -8,6 +8,24 @@ Content-Type: application/json
   "security_input": "Events buyer Term loan"
 }
 ]
+###
+POST http://localhost:7071/api/store-mappings
+Content-Type: application/json
+
+{
+  "company_input": "Events Buyer LLC",
+  "security_input": "Events Buyer Term Loan",
+  "target_security_name": "360DG (Term Loan)",
+  "filetype": "cash_file",
+  "loan_type": "Term Loan"
+}
+
+###
+GET http://localhost:7071/api/view-mappings
+
+###
+DELETE http://localhost:7071/api/delete-mappings/0eb0fbc4467ab0e96a42db76c6581bea5e32b80cc495675a65ba2445f9edcc86
+
 ### 2
 POST http://localhost:7071/api/map-security
 Content-Type: application/json

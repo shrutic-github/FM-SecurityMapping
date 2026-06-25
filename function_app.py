@@ -821,10 +821,10 @@ def _resolve_security_mapping(
         # match override it.
         is_high_confidence_family = best_family.get("score", 0.0) >= 1.0
 
-        candidate_families = (
-            [best_family] if is_high_confidence_family else family_matches
-        )
-
+        # candidate_families = (
+        #     [best_family] if is_high_confidence_family else family_matches
+        # )
+        candidate_families = family_matches
         # Search securities within the resolved family, or across all
         # candidate families when family confidence is still low.
         reranked_securities = search_securities_es(
@@ -886,18 +886,18 @@ def _resolve_security_mapping(
             "matched": matched,
             "match_type": "direct" if matched else "unmatched",
         },
-        "master_data": (
-            {
-                "family_name": best_family.get("family_name"),
-                "normalized_family_name": best_family.get("normalized_family_name"),
-                "soi_name": best_family.get("soi_name"),
-                "security_name": best_family.get("top_security"),
-                "normalized_security_name": best_family.get("normalized_security_name"),
-                "security_type": best_family.get("security_type"),
-            }
-            if best_family
-            else None
-        ),
+        # "master_data": (
+        #     {
+        #         "family_name": best_family.get("family_name"),
+        #         "normalized_family_name": best_family.get("normalized_family_name"),
+        #         "soi_name": best_family.get("soi_name"),
+        #         "security_name": best_family.get("top_security"),
+        #         "normalized_security_name": best_family.get("normalized_security_name"),
+        #         "security_type": best_family.get("security_type"),
+        #     }
+        #     if best_family
+        #     else None
+        # ),
 
         "candidates": {
             "top_families": [
@@ -973,7 +973,7 @@ def _build_mapping_doc(
 
 
 # ─────────────────────────────────────────────────────────────────
-# Endpoint 1: Security Retrieval  POST /api/map-security
+# Endpoint 1: Security Retrieval  POST /api/security-mapping 
 # ─────────────────────────────────────────────────────────────────
 @app.route(route="security-mapping", methods=["POST"])
 def security_mapping_api(req: func.HttpRequest) -> func.HttpResponse:

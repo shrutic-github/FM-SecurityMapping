@@ -1228,3 +1228,125 @@ def delete_mapping_api(req: func.HttpRequest) -> func.HttpResponse:
         return func.HttpResponse(
             json.dumps({"error": str(e)}), status_code=500, mimetype="application/json"
         )
+# ─────────────────────────────────────────────────────────────────
+# Endpoint 6: Store Master Security
+# POST /api/store-master-security
+# ─────────────────────────────────────────────────────────────────
+@app.route(route="store-master-security", methods=["POST"])
+def store_master_security_api(req: func.HttpRequest) -> func.HttpResponse:
+    try:
+        body = req.get_json()
+
+        soi_name = body.get("soi_name")
+        family_name = body.get("family_name")
+        security_name = body.get("master_comp_security_name")
+        security_type = body.get("security_type")
+
+        if not all([soi_name, family_name, security_name, security_type]):
+            return func.HttpResponse(
+                json.dumps({
+                    "error": "soi_name, family_name, master_comp_security_name and security_type are required"
+                }),
+                status_code=400,
+                mimetype="application/json",
+            )
+
+        conn_string = os.environ.get("POSTGRES_CONN")
+        if not conn_string:
+            raise Exception("POSTGRES_CONN not found")
+
+        # Normalize input
+        norm_soi = normalize_input(
+            soi_name,
+            conn_string
+        )["normalized_query"]
+
+        norm_family = normalize_input(
+            family_name,
+            conn_string
+        )["normalized_query"]
+
+        norm_security = normalize_input(
+            security_name,
+            conn_string
+        )["normalized_query"]
+
+        es = get_es_client()
+        index_name = os.environ.get("ES_INDEX", "security_master_v4")
+
+        # Duplicate check
+        duplicate_query = {
+            "size": 1,
+            "query": {
+                "bool": {
+                    "must": [
+                        {
+                            "term": {
+                                "normalized_security_name.keyword": norm_security
+                            }
+                        },
+                        {
+                            "term": {
+                                "normalized_family_name.keyword": norm_family
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+        existing = es.search(
+            index=index_name,
+            body=duplicate_query
+        )
+
+        if existing["hits"]["total"]["value"] > 0:
+            existing_hit = existing["hits"]["hits"][0]
+            return func.HttpResponse(
+                json.dumps({
+                    "error": "Master security already exists",
+                    "id": existing_hit["_id"],
+                    "existing_document": existing_hit["_source"],
+                }),
+                status_code=409,
+                mimetype="application/json",
+            )
+
+        master_doc = {
+            "soi_name": soi_name,
+            "security_name": security_name,
+            "family_name": family_name,
+            "security_type": security_type,
+
+            "normalized_name": norm_security,
+            "normalized_security_name": norm_security,
+            "normalized_soi_name": norm_soi,
+            "normalized_family_name": norm_family,
+
+            "ingested_at": datetime.now(timezone.utc).isoformat()
+        }
+
+        response = es.index(
+            index=index_name,
+            document=master_doc,
+            refresh=True
+        )
+
+        return func.HttpResponse(
+            json.dumps({
+                "message": "Master security stored successfully",
+                "id": response["_id"],
+                "document": master_doc
+            }),
+            status_code=201,
+            mimetype="application/json",
+        )
+
+    except Exception as e:
+        logging.error(f"Error storing master security: {e}")
+
+        return func.HttpResponse(
+            json.dumps({"error": str(e)}),
+            status_code=500,
+            mimetype="application/json",
+        )

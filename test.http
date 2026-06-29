@@ -29,6 +29,9 @@ DELETE http://localhost:7071/api/delete-mappings/0eb0fbc4467ab0e96a42db76c6581be
 
 ###
 GET http://localhost:7071/api/view-mappings?format=csv
+
+###
+POST http://localhost:7071/api/store-master-security
 ### 2
 POST http://localhost:7071/api/security-mapping
 Content-Type: application/json
@@ -53,11 +56,12 @@ Content-Type: application/json
 POST http://localhost:7071/api/security-mapping
 Content-Type: application/json
 
+[
 {
   "company_input": "Aechelon Technology Inc.",
-  "security_input": "Aechelon Technology  T/L "
+  "security_input": "Aechelon Technology  T/L 4th amendment "
 }
-
+]
 ### 5
 POST http://localhost:7071/api/security-mapping
 Content-Type: application/json

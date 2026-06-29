@@ -32,6 +32,14 @@ GET http://localhost:7071/api/view-mappings?format=csv
 
 ###
 POST http://localhost:7071/api/store-master-security
+Content-Type: application/json
+
+{
+    "soi_name": "American Auto Auction Group, LLC",
+    "family_name": "sadsad",
+    "master_comp_security_name": "XLerate",
+    "security_type": "First Lien"
+}
 ### 2
 POST http://localhost:7071/api/security-mapping
 Content-Type: application/json

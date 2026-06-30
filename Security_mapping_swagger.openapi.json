@@ -1,0 +1,1166 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "module",
+    "description": "Security retrieval and mapping management API",
+    "version": "1.0.0"
+  },
+  "tags": [
+    {
+      "name": "Master Security"
+    },
+    {
+      "name": "Mapping"
+    }
+  ],
+  "paths": {
+    "/store-master-security": {
+      "post": {
+        "summary": "Add a new master security record to the index",
+        "deprecated": false,
+        "description": "Adds a new master (non-alias) security record to the Elasticsearch index. Use this when a security does not yet exist in the index and you want to make it available for future matching.",
+        "operationId": "storeMasterSecurity",
+        "tags": [
+          "Master Security"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreMasterSecurityRequest"
+              },
+              "example": {
+                "soi_name": "Events Buyer",
+                "family_name": "Events Buyer, LLC",
+                "master_comp_security_name": "Events Buyer, LLC Initial Term Loan",
+                "security_type": "Term Loan"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Master security created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreMasterSecurityResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "Missing required field",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "soi_name, family_name, master_comp_security_name and security_type are required"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "409": {
+            "description": "A master record with the same normalized security + family name already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasterSecurityConflictResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError",
+            "description": "ES or Postgres connection failure"
+          }
+        },
+        "security": [
+          {
+            "FunctionKey": []
+          }
+        ]
+      }
+    },
+    "/security-mapping": {
+      "post": {
+        "summary": "Resolve input strings to matching securities",
+        "deprecated": false,
+        "description": "Resolves one or more (company, security) input pairs to their best matching master securities. Always accepts a JSON array even for a single item.",
+        "operationId": "resolveSecurityMapping",
+        "tags": [
+          "Mapping"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/SecurityMappingRequestItem"
+                }
+              },
+              "example": [
+                {
+                  "company_input": "Events Buyer, LLC",
+                  "security_input": "Events buyer Term loan",
+                  "file_type": "us_bank_cashfile"
+                },
+                {
+                  "company_input": "AFC-Dell Holding Corp.",
+                  "security_input": "AFC-Dell Holding DD T/L (12/23)"
+                }
+              ]
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Array of result objects in the same order as the request. A failed individual item returns {\"error\": \"<message>\"} without failing the whole batch.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/SearchMatchResult"
+                      },
+                      {
+                        "$ref": "#/components/schemas/MappedMatchResult"
+                      },
+                      {
+                        "$ref": "#/components/schemas/ItemError"
+                      }
+                    ],
+                    "discriminator": {
+                      "propertyName": "is_mapped"
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "Request body is not an array",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Payload must be a JSON array"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError",
+            "description": "ES or Postgres connection failure"
+          }
+        },
+        "security": [
+          {
+            "FunctionKey": []
+          }
+        ]
+      }
+    },
+    "/store-mappings": {
+      "post": {
+        "summary": "Store a user-confirmed mapping",
+        "deprecated": false,
+        "description": "Stores a user-confirmed (company, security) -> master security mapping in Elasticsearch. Future calls to /api/security-mapping with the same input will resolve instantly via the alias bypass without a full ES search.",
+        "operationId": "storeMapping",
+        "tags": [
+          "Mapping"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreMappingRequest"
+              },
+              "example": {
+                "company_input": "Events Buyer, LLC",
+                "security_input": "Events buyer Term loan",
+                "target_security_name": "Events Buyer, LLC Initial Term Loan",
+                "file_type": "us_bank_cashfile",
+                "loan_type": "Term Loan",
+                "metadata": {}
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Mapping created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreMappingResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "Missing required field",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "company_input, security_input, and target_security_name are required"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "409": {
+            "description": "A mapping for this normalized pair already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError",
+            "description": "ES or Postgres connection failure"
+          }
+        },
+        "security": [
+          {
+            "FunctionKey": []
+          }
+        ]
+      }
+    },
+    "/view-mappings": {
+      "get": {
+        "summary": "Filter mappings by company / security, list all, or download CSV",
+        "deprecated": false,
+        "description": "Three modes depending on which query parameters are supplied: filter by company_input and/or security_input, paginated browse of all mappings, or CSV download via format=csv.",
+        "operationId": "viewMappings",
+        "tags": [
+          "Mapping"
+        ],
+        "parameters": [
+          {
+            "name": "company_input",
+            "in": "query",
+            "description": "Filter by company name (normalized before matching). Returns all stored mappings for that company.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "security_input",
+            "in": "query",
+            "description": "Filter by security name (normalized before matching). Returns all stored mappings for that security.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number for browsing all mappings. Ignored when company_input or security_input is present.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Results per page. Ignored when company_input or security_input is present.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "maximum": 1000
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Pass csv to download all mappings as a CSV file. Cannot be combined with company_input/security_input.",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "csv"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mappings returned, either filtered, paginated, or as CSV",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/FilteredMappingsResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PaginatedMappingsResponse"
+                    }
+                  ]
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "Content-Disposition": {
+                "required": false,
+                "description": "Present only for format=csv responses",
+                "schema": {
+                  "type": "string",
+                  "example": "attachment; filename=all_mappings.csv"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Filter returned no results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "No mappings found for the given input"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError",
+            "description": "ES or Postgres connection failure"
+          }
+        },
+        "security": [
+          {
+            "FunctionKey": []
+          }
+        ]
+      }
+    },
+    "/update-mappings/{id}": {
+      "put": {
+        "summary": "Update a stored mapping",
+        "deprecated": false,
+        "description": "Updates an existing mapping record. Use this to re-point a stored mapping to a different master security or update metadata.",
+        "operationId": "updateMapping",
+        "tags": [
+          "Mapping"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "SHA-256 mapping ID returned by the store endpoint",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMappingRequest"
+              },
+              "example": {
+                "target_security_name": "Events Buyer, LLC Amended Term Loan",
+                "file_type": "manual_review",
+                "loan_type": "Term Loan",
+                "metadata": {
+                  "reviewed_by": "analyst_1"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mapping updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateMappingResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "No document with that ID exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Mapping not found"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError",
+            "description": "ES or Postgres connection failure"
+          }
+        },
+        "security": [
+          {
+            "FunctionKey": []
+          }
+        ]
+      }
+    },
+    "/delete-mappings/{id}": {
+      "delete": {
+        "summary": "Delete a stored mapping",
+        "deprecated": false,
+        "description": "Permanently removes a stored mapping from Elasticsearch. After deletion, future retrieval calls for the same input will fall back to the full ES search.",
+        "operationId": "deleteMapping",
+        "tags": [
+          "Mapping"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "SHA-256 mapping ID returned by the store endpoint",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mapping deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteMappingResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "No document with that ID exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Mapping not found"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError",
+            "description": "ES or Postgres connection failure"
+          }
+        },
+        "security": [
+          {
+            "FunctionKey": []
+          }
+        ]
+      }
+    }
+  },
+  "webhooks": {},
+  "components": {
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "ItemError": {
+        "type": "object",
+        "description": "Returned for an individual failed item within a batch /security-mapping call.",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "SecurityMappingRequestItem": {
+        "type": "object",
+        "required": [
+          "company_input"
+        ],
+        "properties": {
+          "company_input": {
+            "type": "string",
+            "description": "Raw company / issuer name"
+          },
+          "security_input": {
+            "type": "string",
+            "description": "Raw security description. Defaults to company_input if omitted."
+          },
+          "file_type": {
+            "type": "string",
+            "description": "Source file type label (e.g. us_bank_cashfile, trade_blotter). Echoed back in the response input block. Pass the same value as file_type when calling POST /api/store-mappings."
+          }
+        }
+      },
+      "MatchType": {
+        "type": "string",
+        "enum": [
+          "historical",
+          "indirect",
+          "direct",
+          "unmatched"
+        ]
+      },
+      "ConfidenceScore": {
+        "type": "number",
+        "format": "float",
+        "minimum": 0,
+        "maximum": 1
+      },
+      "InputBlock": {
+        "type": "object",
+        "properties": {
+          "company_input": {
+            "type": "string",
+            "description": "Original company string as sent"
+          },
+          "security_input": {
+            "type": "string",
+            "description": "Original security string as sent"
+          },
+          "company_query": {
+            "type": "string",
+            "description": "Normalized form used for ES search"
+          },
+          "security_query": {
+            "type": "string",
+            "description": "Normalized form used for ES search"
+          },
+          "file_type": {
+            "type": "string",
+            "description": "Echoed from the request item. Only present if file_type was supplied. Pass the same value as file_type when calling POST /api/store-mappings."
+          }
+        }
+      },
+      "MasterSecurityDetails": {
+        "type": "object",
+        "properties": {
+          "family_name": {
+            "type": "string"
+          },
+          "normalized_family_name": {
+            "type": "string"
+          },
+          "soi_name": {
+            "type": "string"
+          },
+          "security_name": {
+            "type": "string"
+          },
+          "normalized_security_name": {
+            "type": "string"
+          },
+          "security_type": {
+            "type": "string"
+          }
+        }
+      },
+      "CandidateFamily": {
+        "type": "object",
+        "properties": {
+          "family_name": {
+            "type": "string"
+          }
+        }
+      },
+      "RankedSecurity": {
+        "type": "object",
+        "properties": {
+          "security_name": {
+            "type": "string"
+          },
+          "security_type": {
+            "type": "string"
+          },
+          "normalized_soi_name": {
+            "type": "string"
+          },
+          "normalized_security_name": {
+            "type": "string"
+          },
+          "normalized_family_name": {
+            "type": "string"
+          },
+          "score": {
+            "type": "number",
+            "format": "float"
+          }
+        }
+      },
+      "Candidates": {
+        "type": "object",
+        "properties": {
+          "top_families": {
+            "type": "array",
+            "description": "Up to 5 candidate families considered",
+            "items": {
+              "$ref": "#/components/schemas/CandidateFamily"
+            }
+          },
+          "ranked_securities": {
+            "type": "array",
+            "description": "All securities evaluated within candidate families",
+            "items": {
+              "$ref": "#/components/schemas/RankedSecurity"
+            }
+          }
+        }
+      },
+      "MatchBlock": {
+        "type": "object",
+        "properties": {
+          "top_security": {
+            "type": "string",
+            "description": "Best matching security name"
+          },
+          "family_confidence": {
+            "$ref": "#/components/schemas/ConfidenceScore"
+          },
+          "security_confidence": {
+            "$ref": "#/components/schemas/ConfidenceScore"
+          },
+          "matched": {
+            "type": "boolean",
+            "description": "true if a security was found"
+          },
+          "match_type": {
+            "$ref": "#/components/schemas/MatchType"
+          }
+        }
+      },
+      "SearchMatchResult": {
+        "type": "object",
+        "description": "Returned when the match is resolved through Elasticsearch fuzzy/phrase search (is_mapped: false).",
+        "properties": {
+          "input": {
+            "$ref": "#/components/schemas/InputBlock"
+          },
+          "is_mapped": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "match": {
+            "$ref": "#/components/schemas/MatchBlock"
+          },
+          "master_data": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MasterSecurityDetails"
+              }
+            ],
+            "description": "Resolved master record. Present only when is_mapped: false. null when unmatched.",
+            "type": "null"
+          },
+          "candidates": {
+            "$ref": "#/components/schemas/Candidates"
+          }
+        },
+        "required": [
+          "input",
+          "is_mapped",
+          "match"
+        ]
+      },
+      "MappedDetails": {
+        "type": "object",
+        "properties": {
+          "mapped_family": {
+            "type": "string"
+          },
+          "mapped_security": {
+            "type": "string"
+          },
+          "filetype": {
+            "type": "string"
+          },
+          "mapped_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "master_security_details": {
+            "$ref": "#/components/schemas/MasterSecurityDetails"
+          }
+        }
+      },
+      "MappedMatchResult": {
+        "type": "object",
+        "description": "Returned when the input pair resolves directly to a pre-stored alias record (is_mapped: true). Confidence is always 1.0.",
+        "properties": {
+          "input": {
+            "$ref": "#/components/schemas/InputBlock"
+          },
+          "is_mapped": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "mapped": {
+            "$ref": "#/components/schemas/MappedDetails"
+          },
+          "match": {
+            "$ref": "#/components/schemas/MatchBlock"
+          }
+        },
+        "required": [
+          "input",
+          "is_mapped",
+          "mapped",
+          "match"
+        ]
+      },
+      "StoreMappingRequest": {
+        "type": "object",
+        "required": [
+          "company_input",
+          "security_input",
+          "target_security_name"
+        ],
+        "properties": {
+          "company_input": {
+            "type": "string",
+            "description": "Raw company name as it appears in the source system"
+          },
+          "security_input": {
+            "type": "string",
+            "description": "Raw security name as it appears in the source system"
+          },
+          "target_security_name": {
+            "type": "string",
+            "description": "Exact master security name to map to (use match.top_security from retrieval response)"
+          },
+          "file_type": {
+            "type": "string",
+            "description": "Source file type label (e.g. us_bank_cashfile). Use the value from input.file_type in the Endpoint 1 response."
+          },
+          "loan_type": {
+            "type": "string",
+            "description": "Loan/security type override. Defaults to master record's security_type."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Arbitrary key-value metadata to attach to the mapping record",
+            "additionalProperties": true,
+            "properties": {}
+          }
+        }
+      },
+      "MappingDocument": {
+        "type": "object",
+        "properties": {
+          "is_alias": {
+            "type": "boolean"
+          },
+          "company_name": {
+            "type": "string"
+          },
+          "normalized_company_name": {
+            "type": "string"
+          },
+          "security_name": {
+            "type": "string"
+          },
+          "normalized_security_name": {
+            "type": "string"
+          },
+          "filetype": {
+            "type": "string"
+          },
+          "loan_type": {
+            "type": "string"
+          },
+          "master_family_name": {
+            "type": "string"
+          },
+          "master_normalized_family_name": {
+            "type": "string"
+          },
+          "master_security_name": {
+            "type": "string"
+          },
+          "master_normalized_security_name": {
+            "type": "string"
+          },
+          "master_soi_name": {
+            "type": "string"
+          },
+          "master_security_type": {
+            "type": "string"
+          },
+          "master_security_details": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {}
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {}
+          },
+          "ingested_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "StoreMappingResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "SHA-256 hash of normalized_company|normalized_security. Use this for GET / PUT / DELETE calls."
+          },
+          "mapping": {
+            "$ref": "#/components/schemas/MappingDocument"
+          }
+        }
+      },
+      "ConflictResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "examples": [
+              "Mapping already exists"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "existing_mapping": {
+            "$ref": "#/components/schemas/MappingDocument"
+          }
+        }
+      },
+      "MappingSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "company_name": {
+            "type": "string"
+          },
+          "security_name": {
+            "type": "string"
+          },
+          "master_family_name": {
+            "type": "string"
+          },
+          "master_security_name": {
+            "type": "string"
+          },
+          "master_security_type": {
+            "type": "string"
+          },
+          "filetype": {
+            "type": "string"
+          },
+          "loan_type": {
+            "type": "string"
+          },
+          "ingested_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FilteredMappingsResponse": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MappingSummary"
+            }
+          }
+        }
+      },
+      "PaginatedMappingsResponse": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer",
+            "description": "Total number of stored mappings in the index (only in paginated mode)"
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of results returned"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MappingSummary"
+            }
+          }
+        }
+      },
+      "UpdateMappingRequest": {
+        "type": "object",
+        "description": "All fields are optional. Omitted fields retain their existing values.",
+        "properties": {
+          "target_security_name": {
+            "type": "string",
+            "description": "New master security to point to. If omitted, existing master details are kept."
+          },
+          "file_type": {
+            "type": "string",
+            "description": "Updated file type label"
+          },
+          "loan_type": {
+            "type": "string",
+            "description": "Updated loan type"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Replaces existing metadata entirely",
+            "additionalProperties": true,
+            "properties": {}
+          }
+        }
+      },
+      "UpdateMappingResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "mapping": {
+            "type": "object",
+            "properties": {
+              "company_name": {
+                "type": "string"
+              },
+              "security_name": {
+                "type": "string"
+              },
+              "master_security_name": {
+                "type": "string"
+              },
+              "ingested_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      },
+      "DeleteMappingResponse": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "StoreMasterSecurityRequest": {
+        "type": "object",
+        "required": [
+          "soi_name",
+          "family_name",
+          "master_comp_security_name",
+          "security_type"
+        ],
+        "properties": {
+          "soi_name": {
+            "type": "string",
+            "description": "Schedule of Investments name (short company name)"
+          },
+          "family_name": {
+            "type": "string",
+            "description": "Full legal entity / family name"
+          },
+          "master_comp_security_name": {
+            "type": "string",
+            "description": "Full master security name to index"
+          },
+          "security_type": {
+            "type": "string",
+            "description": "Type of security (e.g. Term Loan, Revolver, Common Equity)"
+          }
+        }
+      },
+      "MasterSecurityDocument": {
+        "type": "object",
+        "properties": {
+          "soi_name": {
+            "type": "string"
+          },
+          "family_name": {
+            "type": "string"
+          },
+          "security_name": {
+            "type": "string"
+          },
+          "security_type": {
+            "type": "string"
+          },
+          "normalized_security_name": {
+            "type": "string"
+          },
+          "normalized_soi_name": {
+            "type": "string"
+          },
+          "normalized_family_name": {
+            "type": "string"
+          },
+          "ingested_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "StoreMasterSecurityResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "examples": [
+              "Master security stored successfully"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "description": "Elasticsearch auto-generated ID, not a SHA-256 hash. Not used by the other endpoints."
+          },
+          "document": {
+            "$ref": "#/components/schemas/MasterSecurityDocument"
+          }
+        }
+      },
+      "MasterSecurityConflictResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "examples": [
+              "Master security already exists"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "existing_document": {
+            "$ref": "#/components/schemas/MasterSecurityDocument"
+          }
+        }
+      }
+    },
+    "responses": {
+      "ServerError": {
+        "description": "ES or Postgres connection failure",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "FunctionKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-functions-key"
+      },
+      "FunctionKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-functions-key",
+        "description": "Azure Function App function-level key. Can alternatively be passed as the ?code= query parameter. Not required for local development."
+      }
+    }
+  },
+  "servers": [],
+  "security": [
+    {
+      "FunctionKey": []
+    }
+  ]
+}

@@ -43,9 +43,10 @@ Local development requires no key.
 |---|---|---|---|
 | 1 | `POST` | `/api/security-mapping` | Resolve input strings to matching securities |
 | 2 | `POST` | `/api/store-mappings` | Store a user-confirmed mapping |
-| 3 | `GET` | `/api/view-mappings` | List all stored mappings / download as CSV |
+| 3 | `GET` | `/api/view-mappings` | Filter mappings by company / security, list all, or download CSV |
 | 4 | `PUT` | `/api/update-mappings/{id}` | Update a stored mapping |
 | 5 | `DELETE` | `/api/delete-mappings/{id}` | Delete a stored mapping |
+| 6 | `POST` | `/api/store-master-security` | Add a new master security record to the index |
 
 ---
 
@@ -83,7 +84,7 @@ Array of objects:
 |---|---|---|---|
 | `company_input` | string | Yes | Raw company / issuer name |
 | `security_input` | string | No | Raw security description. Defaults to `company_input` if omitted. |
-| `file_type` | string | No | Source file type label (e.g. `"us_bank_cashfile"`, `"trade_blotter"`). Echoed back in the response `input` block. Pass this as `filetype` when calling `POST /api/store-mappings`. |
+| `file_type` | string | No | Source file type label (e.g. `"us_bank_cashfile"`, `"trade_blotter"`). Echoed back in the response `input` block. Pass the same value as `file_type` when calling `POST /api/store-mappings`. |
 
 ### Response — `200 OK`
 
@@ -186,7 +187,7 @@ Returned when the input pair resolves directly to a pre-stored alias record (use
 | `input.security_input` | string | Original security string as sent |
 | `input.company_query` | string | Normalized form used for ES search |
 | `input.security_query` | string | Normalized form used for ES search |
-| `input.file_type` | string | Echoed from the request item. Only present if `file_type` was supplied. Pass as `filetype` when calling `POST /api/store-mappings`. |
+| `input.file_type` | string | Echoed from the request item. Only present if `file_type` was supplied. Pass the same value as `file_type` when calling `POST /api/store-mappings`. |
 | `is_mapped` | boolean | `true` if hit came from a pre-stored alias record |
 | `match.top_security` | string | Best matching security name |
 | `match.family_confidence` | float 0–1 | Confidence in the company/family match |
@@ -246,7 +247,7 @@ x-functions-key: <key>
   "company_input": "Events Buyer, LLC",
   "security_input": "Events buyer Term loan",
   "target_security_name": "Events Buyer, LLC Initial Term Loan",
-  "filetype": "us_bank_cashfile",
+  "file_type": "us_bank_cashfile",
   "loan_type": "Term Loan",
   "metadata": {}
 }
@@ -257,7 +258,7 @@ x-functions-key: <key>
 | `company_input` | string | Yes | Raw company name as it appears in the source system |
 | `security_input` | string | Yes | Raw security name as it appears in the source system |
 | `target_security_name` | string | Yes | Exact master security name to map to (use `match.top_security` from retrieval response) |
-| `filetype` | string | No | Source file type label (e.g. `"us_bank_cashfile"`). Use the value from `input.file_type` in the retrieval response. Note the field is named `file_type` in Endpoint 1 input / response, but `filetype` here and in stored ES documents. |
+| `file_type` | string | No | Source file type label (e.g. `"us_bank_cashfile"`). Use the value from `input.file_type` in the Endpoint 1 response. |
 | `loan_type` | string | No | Loan/security type override. Defaults to master record's `security_type`. |
 | `metadata` | object | No | Arbitrary key-value metadata to attach to the mapping record |
 
@@ -302,11 +303,11 @@ x-functions-key: <key>
 
 ---
 
-## Endpoint 3 — List / Download All Mappings
+## Endpoint 3 — View / Download Mappings
 
 ### `GET /api/view-mappings`
 
-Returns all stored (alias) mapping records from Elasticsearch. Supports pagination and CSV download.
+Three modes depending on which query parameters are supplied:
 
 **Headers**
 ```
@@ -315,20 +316,29 @@ x-functions-key: <key>
 
 ### Query Parameters
 
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `page` | integer | `1` | Page number (1-based) |
-| `limit` | integer | `100` | Results per page. Maximum `1000`. |
-| `format` | string | `json` | `json` for paginated JSON response; `csv` to download as a CSV file |
+| Parameter | Type | Description |
+|---|---|---|
+| `company_input` | string | Filter by company name (normalized before matching). Returns all stored mappings for that company. |
+| `security_input` | string | Filter by security name (normalized before matching). Returns all stored mappings for that security. |
+| `page` | integer | Page number for browsing all mappings (default `1`). Ignored when `company_input` or `security_input` is present. |
+| `limit` | integer | Results per page (default `100`, max `1000`). Ignored when `company_input` or `security_input` is present. |
+| `format` | string | Pass `csv` to download **all** mappings as a CSV file. Cannot be combined with `company_input`/`security_input`. |
 
-### Response — `200 OK` (JSON)
+### Behaviour summary
+
+| Query params | Behaviour |
+|---|---|
+| `?company_input=...` | Returns mappings for that company only |
+| `?security_input=...` | Returns mappings for that security only |
+| `?company_input=...&security_input=...` | Returns mappings matching both (AND) |
+| _(none)_ | Returns all mappings, paginated |
+| `?format=csv` | Downloads all mappings as `all_mappings.csv` |
+
+### Response — `200 OK` (filtered by company / security)
 
 ```json
 {
-  "page": 1,
-  "limit": 100,
-  "total": 342,
-  "count": 100,
+  "count": 3,
   "results": [
     {
       "id": "a3f2c1d4e5b6...",
@@ -345,28 +355,41 @@ x-functions-key: <key>
 }
 ```
 
+### Response — `200 OK` (all mappings, paginated)
+
+```json
+{
+  "page": 1,
+  "limit": 100,
+  "total": 342,
+  "count": 100,
+  "results": [ { "id": "...", "company_name": "...", "..." : "..." } ]
+}
+```
+
 | Field | Description |
 |---|---|
-| `total` | Total number of stored mappings in the index |
-| `count` | Number of results in this page |
+| `total` | Total number of stored mappings in the index (only in paginated mode) |
+| `count` | Number of results returned |
 | `results` | Array of mapping records |
 
 ### Response — `200 OK` (CSV, `?format=csv`)
 
-Returns a `text/csv` file attachment named `mappings.csv`.
+Returns a `text/csv` file attachment named `all_mappings.csv`.
 
 ```
 Content-Type: text/csv
-Content-Disposition: attachment; filename=mappings.csv
+Content-Disposition: attachment; filename=all_mappings.csv
 ```
 
-Columns match the JSON result fields: `id`, `company_name`, `security_name`, `master_family_name`, `master_security_name`, `master_security_type`, `filetype`, `loan_type`, `ingested_at`.
+Columns: `id`, `company_name`, `security_name`, `master_family_name`, `master_security_name`, `master_security_type`, `filetype`, `loan_type`, `ingested_at`.
 
 ### Error Responses
 
 | Status | Body | Cause |
 |---|---|---|
-| `500` | `{"error": "<message>"}` | ES connection failure |
+| `404` | `{"error": "No mappings found for the given input"}` | Filter returned no results |
+| `500` | `{"error": "<message>"}` | ES or Postgres connection failure |
 
 ---
 
@@ -395,7 +418,7 @@ All fields are optional. Omitted fields retain their existing values.
 ```json
 {
   "target_security_name": "Events Buyer, LLC Amended Term Loan",
-  "filetype": "manual_review",
+  "file_type": "manual_review",
   "loan_type": "Term Loan",
   "metadata": { "reviewed_by": "analyst_1" }
 }
@@ -404,7 +427,7 @@ All fields are optional. Omitted fields retain their existing values.
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `target_security_name` | string | No | New master security to point to. If omitted, existing master details are kept. |
-| `filetype` | string | No | Updated file type label |
+| `file_type` | string | No | Updated file type label |
 | `loan_type` | string | No | Updated loan type |
 | `metadata` | object | No | Replaces existing metadata entirely |
 
@@ -466,7 +489,151 @@ x-functions-key: <key>
 
 ---
 
+## Endpoint 6 — Store Master Security
+
+### `POST /api/store-master-security`
+
+Adds a new master (non-alias) security record to the Elasticsearch index. Use this when a security does not yet exist in the index and you want to make it available for future matching.
+
+**Headers**
+```
+Content-Type: application/json
+x-functions-key: <key>
+```
+
+### Request Body
+
+```json
+{
+  "soi_name": "Events Buyer",
+  "family_name": "Events Buyer, LLC",
+  "master_comp_security_name": "Events Buyer, LLC Initial Term Loan",
+  "security_type": "Term Loan"
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `soi_name` | string | Yes | Schedule of Investments name (short company name) |
+| `family_name` | string | Yes | Full legal entity / family name |
+| `master_comp_security_name` | string | Yes | Full master security name to index |
+| `security_type` | string | Yes | Type of security (e.g. `"Term Loan"`, `"Revolver"`, `"Common Equity"`) |
+
+### Response — `201 Created`
+
+```json
+{
+  "message": "Master security stored successfully",
+  "id": "<es-auto-generated-id>",
+  "document": {
+    "soi_name": "Events Buyer",
+    "family_name": "Events Buyer, LLC",
+    "security_name": "Events Buyer, LLC Initial Term Loan",
+    "security_type": "Term Loan",
+    "normalized_security_name": "events buyer initial term loan",
+    "normalized_soi_name": "events buyer",
+    "normalized_family_name": "events buyer",
+    "ingested_at": "2024-11-15T10:30:00+00:00"
+  }
+}
+```
+
+> **Note:** The `id` returned here is an Elasticsearch auto-generated ID, not a SHA-256 hash. It is not used by the other endpoints.
+
+### Error Responses
+
+| Status | Body | Cause |
+|---|---|---|
+| `400` | `{"error": "soi_name, family_name, master_comp_security_name and security_type are required"}` | Missing required field |
+| `409` | `{"error": "Master security already exists", "id": "...", "existing_document": {...}}` | A master record with the same normalized security + family name already exists |
+| `500` | `{"error": "<message>"}` | ES or Postgres connection failure |
+
+---
+
 ## Code Examples
+
+### JavaScript / React — Full workflow
+
+```js
+const BASE = "https://<function-app-name>.azurewebsites.net/api";
+const HEADERS = {
+  "Content-Type": "application/json",
+  "x-functions-key": "<your-function-key>",
+};
+
+// 1. Resolve a (company, security) pair
+const searchRes = await fetch(`${BASE}/security-mapping`, {
+  method: "POST",
+  headers: HEADERS,
+  body: JSON.stringify([
+    { company_input: "Events Buyer, LLC", security_input: "Events buyer Term loan" }
+  ]),
+});
+const [result] = await searchRes.json();
+const mappingId = null; // populated after store
+
+// 2. User confirms the match — store it
+if (result.match.matched) {
+  const storeRes = await fetch(`${BASE}/store-mappings`, {
+    method: "POST",
+    headers: HEADERS,
+    body: JSON.stringify({
+      company_input: result.input.company_input,
+      security_input: result.input.security_input,
+      target_security_name: result.match.top_security,
+      file_type: result.input.file_type ?? "",
+    }),
+  });
+  if (storeRes.status === 409) {
+    const conflict = await storeRes.json();
+    console.log("Already mapped:", conflict.existing_mapping);
+  } else {
+    const stored = await storeRes.json();
+    mappingId = stored.id; // store this for update / delete
+  }
+}
+
+// 3a. View all mappings for a company
+const byCompany = await fetch(
+  `${BASE}/view-mappings?company_input=Events+Buyer+LLC`,
+  { headers: HEADERS }
+);
+const { count, results } = await byCompany.json();
+
+// 3b. View all mappings for a security name
+const bySecurity = await fetch(
+  `${BASE}/view-mappings?security_input=Events+buyer+Term+loan`,
+  { headers: HEADERS }
+);
+
+// 3c. Browse all mappings paginated
+const allMappings = await fetch(
+  `${BASE}/view-mappings?page=1&limit=50`,
+  { headers: HEADERS }
+);
+
+// 3d. Download all mappings as CSV
+const csvRes = await fetch(`${BASE}/view-mappings?format=csv`, { headers: HEADERS });
+const blob = await csvRes.blob();
+const url = URL.createObjectURL(blob);
+const a = document.createElement("a");
+a.href = url;
+a.download = "all_mappings.csv";
+a.click();
+
+// 4. Update a mapping (re-point to a different master security)
+await fetch(`${BASE}/update-mappings/${mappingId}`, {
+  method: "PUT",
+  headers: HEADERS,
+  body: JSON.stringify({ target_security_name: "Events Buyer, LLC Amended Term Loan" }),
+});
+
+// 5. Delete a mapping
+await fetch(`${BASE}/delete-mappings/${mappingId}`, {
+  method: "DELETE",
+  headers: HEADERS,
+});
+```
 
 ### Python — Full workflow
 
@@ -492,7 +659,6 @@ result = res.json()[0]
 print(result["match"]["match_type"], result["match"]["top_security"])
 
 # 2. User accepts the match — store it
-# file_type from Endpoint 1 becomes filetype in Endpoint 2
 store_res = requests.post(
     f"{BASE_URL}/store-mappings",
     headers=HEADERS,
@@ -500,18 +666,27 @@ store_res = requests.post(
         "company_input":        result["input"]["company_input"],
         "security_input":       result["input"]["security_input"],
         "target_security_name": result["match"]["top_security"],
-        "filetype":             result["input"].get("file_type", ""),
+        "file_type":            result["input"].get("file_type", ""),
     }
 )
 mapping_id = store_res.json()["id"]   # use this for update / delete
 
-# 3. List all mappings (JSON)
+# 3a. Filter by company name
+company_res = requests.get(f"{BASE_URL}/view-mappings", headers=HEADERS,
+                           params={"company_input": "Events Buyer, LLC"})
+print(company_res.json()["count"], "mappings for this company")
+
+# 3b. Filter by security name
+sec_res = requests.get(f"{BASE_URL}/view-mappings", headers=HEADERS,
+                       params={"security_input": "Events buyer Term loan"})
+
+# 3c. All mappings paginated
 view_res = requests.get(f"{BASE_URL}/view-mappings", headers=HEADERS, params={"page": 1, "limit": 50})
 print(view_res.json()["total"], "total mappings")
 
-# 4. Download as CSV
+# 3d. Download as CSV (always all mappings)
 csv_res = requests.get(f"{BASE_URL}/view-mappings", headers=HEADERS, params={"format": "csv"})
-with open("mappings.csv", "w") as f:
+with open("all_mappings.csv", "w") as f:
     f.write(csv_res.text)
 
 # 5. Update a mapping
@@ -547,11 +722,28 @@ curl -X POST "$BASE/store-mappings" \
     "target_security_name": "Events Buyer, LLC Initial Term Loan"
   }'
 
-# 3. List mappings
+# 3a. Filter by company
+curl "$BASE/view-mappings?company_input=Events+Buyer+LLC" -H "x-functions-key: $KEY"
+
+# 3b. Filter by security
+curl "$BASE/view-mappings?security_input=Events+buyer+Term+loan" -H "x-functions-key: $KEY"
+
+# 3c. All mappings paginated
 curl "$BASE/view-mappings?page=1&limit=50" -H "x-functions-key: $KEY"
 
-# 4. Download CSV
-curl "$BASE/view-mappings?format=csv" -H "x-functions-key: $KEY" -o mappings.csv
+# 3d. Download all as CSV
+curl "$BASE/view-mappings?format=csv" -H "x-functions-key: $KEY" -o all_mappings.csv
+
+# 6. Store a new master security
+curl -X POST "$BASE/store-master-security" \
+  -H "Content-Type: application/json" \
+  -H "x-functions-key: $KEY" \
+  -d '{
+    "soi_name": "Events Buyer",
+    "family_name": "Events Buyer, LLC",
+    "master_comp_security_name": "Events Buyer, LLC Initial Term Loan",
+    "security_type": "Term Loan"
+  }'
 
 # 5. Update
 curl -X PUT "$BASE/update-mappings/<id>" \
@@ -590,4 +782,4 @@ When importing this document into Apidog / Swagger:
 - **Endpoint 3 `format=csv`**: model as a separate response with `content: text/csv`.
 - **`match_type` enum**: `["historical", "indirect", "direct", "unmatched"]`.
 - **`family_confidence` / `security_confidence`**: type `number`, format `float`, minimum `0`, maximum `1`.
-- **`file_type` vs `filetype`**: Endpoint 1 request and response use `file_type` (underscore). Endpoint 2 request, Endpoint 4 request, and all stored ES documents use `filetype` (no underscore). Model them as separate properties in OpenAPI with a description cross-referencing each other.
+- **`file_type` vs `filetype`**: All request bodies use `file_type` (with underscore). Responses that return stored ES documents (store, update, view) return the field as `filetype` (no underscore) because that is the index field name. When reading a mapping response and re-submitting it, map `response.filetype` → `file_type` in the request.

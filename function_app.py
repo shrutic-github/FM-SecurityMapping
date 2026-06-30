@@ -1,7 +1,6 @@
 import logging
 import os
 import azure.functions as func
-import psycopg2
 import json
 import math
 import hashlib
@@ -1060,7 +1059,7 @@ def store_mapping_api(req: func.HttpRequest) -> func.HttpResponse:
         master_doc  = _fetch_master_security_doc(es, index_name, target_security_name)
         mapping_doc = _build_mapping_doc(
             company_input, security_input, norm_company, norm_security, master_doc,
-            filetype=body.get("filetype", ""),
+            filetype=body.get("file_type", ""),
             loan_type=body.get("loan_type", ""),
             metadata=body.get("metadata"),
         )
@@ -1081,9 +1080,10 @@ def store_mapping_api(req: func.HttpRequest) -> func.HttpResponse:
 
 
 # ─────────────────────────────────────────────────────────────────
-# Endpoint 3: List / Download All Mappings  GET /api/mappings
-#   ?page=1&limit=100   → paginated JSON list
-#   ?format=csv         → CSV file download
+# Endpoint 3: View / Download Mappings  GET /api/view-mappings
+#   ?company_input=...  → all stored mappings for that company
+#   ?page=1&limit=100   → paginated list of ALL mappings (JSON)
+#   ?format=csv         → download ALL mappings as CSV
 # ─────────────────────────────────────────────────────────────────
 @app.route(route="view-mappings", methods=["GET"])
 def view_mappings_api(req: func.HttpRequest) -> func.HttpResponse:
@@ -1091,16 +1091,15 @@ def view_mappings_api(req: func.HttpRequest) -> func.HttpResponse:
         es         = get_es_client()
         index_name = os.environ.get("ES_INDEX", "security_master_v4")
 
-        company_input  = req.params.get("company_input")
-        security_input = req.params.get("security_input")
-        fmt            = req.params.get("format", "json").lower()
+        company_input = req.params.get("company_input")
+        fmt           = req.params.get("format", "json").lower()
 
-        # ── CASE 1: EXPORT / DOWNLOAD ALL MAPPINGS ────────────────────────
+        # ── CASE 1: DOWNLOAD ALL MAPPINGS AS CSV ──────────────────────────
         if fmt == "csv":
             res = es.search(
                 index=index_name,
                 body={
-                    "size": 5000, 
+                    "size": 5000,
                     "query": {"term": {"is_alias": True}},
                     "sort": [{"ingested_at": {"order": "desc"}}],
                     "_source": [
@@ -1119,25 +1118,28 @@ def view_mappings_api(req: func.HttpRequest) -> func.HttpResponse:
                 writer = csv.DictWriter(buf, fieldnames=rows[0].keys())
                 writer.writeheader()
                 writer.writerows(rows)
-            
-            filename = "filtered_mappings.csv" if (company_input or security_input) else "all_mappings.csv"
+
             return func.HttpResponse(
                 buf.getvalue(),
                 status_code=200,
                 mimetype="text/csv",
-                headers={"Content-Disposition": f"attachment; filename={filename}"},
+                headers={"Content-Disposition": "attachment; filename=all_mappings.csv"},
             )
 
-        # ── CASE 2: CONTEXTUAL LOOKUP (Automated Search via UI Fields) ───
+        # ── CASE 2: FILTER BY COMPANY AND/OR SECURITY ─────────────────────
+        security_input = req.params.get("security_input")
+
         if company_input or security_input:
             conn_string = os.environ.get("POSTGRES_CONN")
             if not conn_string:
                 raise Exception("POSTGRES_CONN not found")
 
-            must_clauses = []
+            must_clauses = [{"term": {"is_alias": True}}]
+
             if company_input:
                 norm_company = normalize_input(company_input, conn_string)["normalized_query"]
                 must_clauses.append({"match_phrase": {"normalized_company_name": norm_company}})
+
             if security_input:
                 norm_security = normalize_input(security_input, conn_string)["normalized_query"]
                 must_clauses.append({"match_phrase": {"normalized_security_name": norm_security}})
@@ -1145,36 +1147,34 @@ def view_mappings_api(req: func.HttpRequest) -> func.HttpResponse:
             res = es.search(
                 index=index_name,
                 body={
-                    "size": 5,
+                    "size": 100,
                     "query": {"bool": {"must": must_clauses}},
-                    "_source": {
-                        "excludes": [
-                            "is_alias",
-                            "master_family_name", "master_normalized_family_name",
-                            "master_security_name", "master_normalized_security_name",
-                            "master_soi_name", "master_normalized_soi_name",
-                            "master_security_type",
-                        ]
-                    },
-                }
+                    "sort": [{"ingested_at": {"order": "desc"}}],
+                    "_source": [
+                        "company_name", "security_name",
+                        "master_family_name", "master_security_name",
+                        "master_security_type", "filetype", "loan_type",
+                        "ingested_at",
+                    ],
+                },
             )
             hits = res.get("hits", {}).get("hits", [])
             rows = [{"id": h["_id"], **h["_source"]} for h in hits]
 
-            if rows:
+            if not rows:
                 return func.HttpResponse(
-                    json.dumps({"count": len(rows), "results": rows}),
-                    status_code=200,
-                    mimetype="application/json",
-                )
-            else:
-                return func.HttpResponse(
-                    json.dumps({"error": "No existing mapping found for this asset layout"}),
+                    json.dumps({"error": "No mappings found for the given input"}),
                     status_code=404,
                     mimetype="application/json",
                 )
 
-        # ── CASE 3: BROWSE ALL MAPPINGS (UI Grid List View) ────────────────
+            return func.HttpResponse(
+                json.dumps({"count": len(rows), "results": rows}),
+                status_code=200,
+                mimetype="application/json",
+            )
+
+        # ── CASE 3: ALL MAPPINGS PAGINATED ────────────────────────────────
         page  = int(req.params.get("page",  "1"))
         limit = min(int(req.params.get("limit", "100")), 1000)
 
@@ -1185,14 +1185,12 @@ def view_mappings_api(req: func.HttpRequest) -> func.HttpResponse:
                 "size": limit,
                 "query": {"term": {"is_alias": True}},
                 "sort": [{"ingested_at": {"order": "desc"}}],
-                "_source": {
-                    "excludes": [
-                        "master_family_name", "master_normalized_family_name",
-                        "master_security_name", "master_normalized_security_name",
-                        "master_soi_name", "master_normalized_soi_name",
-                        "master_security_type",
-                    ]
-                },
+                "_source": [
+                    "company_name", "security_name",
+                    "master_family_name", "master_security_name",
+                    "master_security_type", "filetype", "loan_type",
+                    "ingested_at",
+                ],
             },
         )
         total = res.get("hits", {}).get("total", {}).get("value", 0)
@@ -1209,7 +1207,7 @@ def view_mappings_api(req: func.HttpRequest) -> func.HttpResponse:
         logging.error(f"Mapping Endpoint Error: {e}")
         return func.HttpResponse(
             json.dumps({"error": str(e)}), status_code=500, mimetype="application/json"
-        )  
+        )
 # ─────────────────────────────────────────────────────────────────
 # Endpoint 4: Update Mapping  PUT /api/mappings/{id}
 # ─────────────────────────────────────────────────────────────────
@@ -1234,20 +1232,25 @@ def update_mapping_api(req: func.HttpRequest) -> func.HttpResponse:
         # 2. Get the user inputs from the request body
         body = req.get_json()
 
-        # 3. Handle Top-Level Fields (Update if provided, otherwise keep existing)
-        for field in ["company_name", "normalized_company_name",
-                      "security_name", "normalized_security_name",
-                      "filetype", "loan_type",
-                      "master_family_name", "master_normalized_family_name",
-                      "master_security_name", "master_normalized_security_name",
-                      "master_soi_name", "master_normalized_soi_name",
-                      "master_security_type"]:
-            if field in body:
-                mapping_doc[field] = body[field]
+        # 3. Re-point to a different master security if requested
+        target_security_name = body.get("target_security_name")
+        if target_security_name:
+            new_master = _fetch_master_security_doc(es, index_name, target_security_name)
+            mapping_doc["master_security_details"]         = new_master
+            mapping_doc["master_family_name"]              = new_master.get("family_name", "")
+            mapping_doc["master_normalized_family_name"]   = new_master.get("normalized_family_name", "")
+            mapping_doc["master_security_name"]            = new_master.get("security_name", "")
+            mapping_doc["master_normalized_security_name"] = new_master.get("normalized_security_name", "")
+            mapping_doc["master_soi_name"]                 = new_master.get("soi_name", "")
+            mapping_doc["master_normalized_soi_name"]      = new_master.get("normalized_soi_name", "")
+            mapping_doc["master_security_type"]            = new_master.get("security_type", "")
 
-        # 4. Handle Nested Object: master_security_details (replace whole object if provided)
-        if "master_security_details" in body and isinstance(body["master_security_details"], dict):
-            mapping_doc["master_security_details"] = body["master_security_details"]
+        # 4. Update simple editable fields only when explicitly provided in the body
+        # file_type in the request maps to filetype in the stored ES document
+        if "file_type" in body:
+            mapping_doc["filetype"] = body["file_type"]
+        if "loan_type" in body:
+            mapping_doc["loan_type"] = body["loan_type"]
 
         # 5. Handle Nested Object: metadata (replace whole object if provided)
         if "metadata" in body and isinstance(body["metadata"], dict):
@@ -1361,25 +1364,18 @@ def store_master_security_api(req: func.HttpRequest) -> func.HttpResponse:
         es = get_es_client()
         index_name = os.environ.get("ES_INDEX", "security_master_v4")
 
-        # Duplicate check
+        # Duplicate check — only among master (non-alias) docs
         duplicate_query = {
             "size": 1,
             "query": {
                 "bool": {
                     "must": [
-                        {
-                            "term": {
-                                "normalized_security_name.keyword": norm_security
-                            }
-                        },
-                        {
-                            "term": {
-                                "normalized_family_name.keyword": norm_family
-                            }
-                        }
-                    ]
+                        {"term": {"normalized_security_name.keyword": norm_security}},
+                        {"term": {"normalized_family_name.keyword": norm_family}},
+                    ],
+                    "must_not": [{"term": {"is_alias": True}}],
                 }
-            }
+            },
         }
 
         existing = es.search(

@@ -16,7 +16,7 @@ Content-Type: application/json
   "company_input": "Events Buyer LLC",
   "security_input": "Events Buyer Term Loan",
   "target_security_name": "360DG (Term Loan)",
-  "filetype": "cash_file",
+  "filetype": "us bank cashfile",
   "loan_type": "Term Loan"
 }
 
@@ -24,8 +24,39 @@ Content-Type: application/json
 GET http://localhost:7071/api/view-mappings
 
 ###
+GET http://localhost:7071/api/view-mappings?company_input=Events Buyer LLC
+
+###
 DELETE http://localhost:7071/api/delete-mappings/0eb0fbc4467ab0e96a42db76c6581bea5e32b80cc495675a65ba2445f9edcc86
 
+###
+# Update Mapping — replace {id} with the SHA-256 id from store-mappings or view-mappings response
+# Case A: change only the target security (keep same company/security identity)
+PUT http://localhost:7071/api/update-mappings/0eb0fbc4467ab0e96a42db76c6581bea5e32b80cc495675a65ba2445f9edcc86
+Content-Type: application/json
+
+{
+  "company_input": "Events Buyer LLC",
+  "security_input": "Events Buyer Term Loan",
+  "target_security_name": "sath industry",
+  "filetype": "us bank cashfile",
+  "loan_type": "Term Loan",
+  "metadata": {}
+}
+
+###
+# Update Mapping — Case B: change the security input (identity changes → old doc deleted, new id returned)
+PUT http://localhost:7071/api/update-mappings/PASTE_DOC_ID_HERE
+Content-Type: application/json
+
+{
+  "company_input": "Events Buyer LLC",
+  "security_input": "Events Buyer Revolver",
+  "target_security_name": "360DG (Term Loan)",
+  "filetype": "cash_file",
+  "loan_type": "Revolver",
+  "metadata": {}
+}
 
 ###
 GET http://localhost:7071/api/view-mappings?format=csv
@@ -101,10 +132,12 @@ Content-Type: application/json
 POST http://localhost:7071/api/security-mapping
 Content-Type: application/json
 
+[
 {
   "company_input": "BLC Holding Company, Inc.",
   "security_input": "BLC Holding Company DD T/L"
 }
+]
 
 ### 9
 POST http://localhost:7071/api/security-mapping
